@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // Define API Base URL
-  const API_URL = "http://localhost:8000";
+  const API_URL = "https://fokolik-api.cengiz.in";
 
   useEffect(() => {
     if (token) {
@@ -89,7 +89,7 @@ export const AuthProvider = ({ children }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
-      
+
       if (!res.ok) {
         const errData = await res.json();
         throw new Error(errData.detail || "Kayıt başarısız.");
@@ -112,7 +112,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const refreshUserBalance = () => {
-      if(token) fetchUser(token);
+    if (token) fetchUser(token);
   }
 
   return (
