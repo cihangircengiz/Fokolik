@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "https://fokolik-api.cengiz.in";
 
 async function def_request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
@@ -68,7 +68,7 @@ export const apiService = {
   connectWebSocket(onMessage) {
     const wsUrl = API_BASE_URL.replace(/^http/, "ws") + "/ws";
     const ws = new WebSocket(wsUrl);
-    
+
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
