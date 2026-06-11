@@ -43,7 +43,7 @@ export default function Home() {
     };
     const fetchActiveSlips = async () => {
         try {
-            const res = await fetch(`http://localhost:8000/slips/my_slips`, {
+            const res = await fetch(`https://fokolik-api.cengiz.in/slips/my_slips`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -86,7 +86,7 @@ export default function Home() {
         setLoading(true);
         try {
             const oddIds = selectedOdds.map(item => item.odd.id);
-            const res = await fetch(`http://localhost:8000/slips/`, {
+            const res = await fetch(`https://fokolik-api.cengiz.in/slips/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -110,7 +110,7 @@ export default function Home() {
     const handleCancelSlip = async (slipId) => {
         if (!window.confirm(`Kupon #${slipId} iptal edilecek, emin misiniz?`)) return;
         try {
-            const res = await fetch(`http://localhost:8000/slips/${slipId}/cancel`, {
+            const res = await fetch(`https://fokolik-api.cengiz.in/slips/${slipId}/cancel`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -274,8 +274,8 @@ export default function Home() {
                                                                         onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
                                                                         disabled={isLiveOrFinished}
                                                                         className={`px-2 py-1 rounded-md min-w-[50px] flex items-center justify-center gap-1 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-md" :
-                                                                                isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
-                                                                                    "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                                                            isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
+                                                                                "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
                                                                             }`}
                                                                     >
                                                                         <span className={isSelected ? "text-indigo-100" : "text-slate-400 dark:text-slate-500 text-[10px]"}>{betType.replace("MS ", "")}</span>
@@ -309,8 +309,8 @@ export default function Home() {
                                                                             onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
                                                                             disabled={isLiveOrFinished}
                                                                             className={`px-3 py-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" :
-                                                                                    isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
-                                                                                        "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                                                                isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
+                                                                                    "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
                                                                                 }`}
                                                                         >
                                                                             <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">{betType}</span>
@@ -334,8 +334,8 @@ export default function Home() {
                                                                             onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
                                                                             disabled={isLiveOrFinished}
                                                                             className={`px-3 py-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" :
-                                                                                    isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
-                                                                                        "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                                                                isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
+                                                                                    "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
                                                                                 }`}
                                                                         >
                                                                             <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">{betType}</span>
@@ -359,8 +359,8 @@ export default function Home() {
                                                                             onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
                                                                             disabled={isLiveOrFinished}
                                                                             className={`px-2 py-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" :
-                                                                                    isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
-                                                                                        "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                                                                isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
+                                                                                    "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
                                                                                 }`}
                                                                         >
                                                                             <span className="text-[9px] text-slate-400 dark:text-slate-500 font-normal">{betType}</span>

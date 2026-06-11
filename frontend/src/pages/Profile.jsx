@@ -14,7 +14,7 @@ export default function Profile() {
   const fetchSlips = async () => {
     if (!token) return;
     try {
-      const res = await fetch(`http://localhost:8000/slips/my_slips`, {
+      const res = await fetch(`https://fokolik-api.cengiz.in/slips/my_slips`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -39,7 +39,7 @@ export default function Profile() {
     if (!window.confirm(`Kupon #${slipId} iptal edilecek, onaylıyor musunuz?`)) return;
 
     try {
-      const res = await fetch(`http://localhost:8000/slips/${slipId}/cancel`, {
+      const res = await fetch(`https://fokolik-api.cengiz.in/slips/${slipId}/cancel`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -87,15 +87,15 @@ export default function Profile() {
     <div className="max-w-5xl mx-auto px-4 py-8">
       {/* Back to Home Button */}
       <div className="mb-6">
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           className="inline-flex items-center gap-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
         >
           <ArrowLeft size={16} /> Ana Sayfaya Dön
         </Link>
       </div>
 
-       {/* Profile Header */}
+      {/* Profile Header */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-4 transition-colors duration-200">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Profilim</h1>
@@ -132,11 +132,10 @@ export default function Profile() {
               <button
                 key={tab.id}
                 onClick={() => setActiveHistoryTab(tab.id)}
-                className={`px-3 py-1.5 sm:px-4 rounded-md text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
-                  activeHistoryTab === tab.id
+                className={`px-3 py-1.5 sm:px-4 rounded-md text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeHistoryTab === tab.id
                     ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm"
                     : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -164,7 +163,7 @@ export default function Profile() {
                   <div className="bg-slate-50 dark:bg-slate-800 p-4 flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 transition-colors duration-200">
                     <div className="flex items-center gap-4 w-full md:w-auto">
                       <button onClick={() => toggleAccordion(slip.id)} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-400 transition-colors cursor-pointer">
-                        {isExpanded ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}
+                        {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                       </button>
                       <div>
                         <span className="font-mono font-bold text-slate-700 dark:text-slate-300 text-sm block">KUPON #{slip.id}</span>
@@ -192,13 +191,13 @@ export default function Profile() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        {slip.status === "pending" && <span className="px-2 py-1 bg-amber-100 dark:bg-amber-950/35 text-amber-700 dark:text-amber-400 text-xs font-bold rounded-md flex items-center gap-1 transition-colors duration-200"><Clock size={12}/> Bekliyor</span>}
+                        {slip.status === "pending" && <span className="px-2 py-1 bg-amber-100 dark:bg-amber-950/35 text-amber-700 dark:text-amber-400 text-xs font-bold rounded-md flex items-center gap-1 transition-colors duration-200"><Clock size={12} /> Bekliyor</span>}
                         {slip.status === "won" && <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-950/35 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-md transition-colors duration-200">Kazandı</span>}
                         {slip.status === "lost" && <span className="px-2 py-1 bg-red-100 dark:bg-red-950/35 text-red-700 dark:text-red-400 text-xs font-bold rounded-md transition-colors duration-200">Kaybetti</span>}
                         {slip.status === "cancelled" && <span className="px-2 py-1 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-xs font-bold rounded-md transition-colors duration-200">İptal</span>}
 
                         {cancelable && (
-                          <button 
+                          <button
                             onClick={() => handleCancelSlip(slip.id)}
                             className="ml-2 text-xs font-bold px-3 py-1.5 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-900/50 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/35 rounded-lg transition-colors cursor-pointer"
                           >
