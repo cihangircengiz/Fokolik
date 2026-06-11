@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { apiService } from '../services/api';
+import { apiService, API_BASE_URL } from '../services/api';
 import { Calendar, HelpCircle, Plus, Receipt, Trash2, Coins, ChevronDown, ChevronUp, Globe, Clock, XCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import ConfirmModal from '../components/ConfirmModal';
+
 export default function Home() {
     const { user, token, refreshUserBalance } = useContext(AuthContext);
 
@@ -11,16 +13,29 @@ export default function Home() {
     const [selectedOdds, setSelectedOdds] = useState([]);
     const [betAmount, setBetAmount] = useState("10");
     const [loading, setLoading] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState(null);
+    const [updateError, setUpdateError] = useState(false);
+    const [workerStatus, setWorkerStatus] = useState(null);
 
-    const [selectedDate, setSelectedDate] = useState(null);
+    const getTodayDateString = () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    const [selectedDate, setSelectedDate] = useState(getTodayDateString());
     const [activeMainTab, setActiveMainTab] = useState("upcoming");
     const [expandedMatches, setExpandedMatches] = useState({});
     const [expandedOddsGroups, setExpandedOddsGroups] = useState({});
     const [isFooterDrawerOpen, setIsFooterDrawerOpen] = useState(false);
+    const [cancelModalState, setCancelModalState] = useState({ isOpen: false, slipId: null });
     const [flashMatches, setFlashMatches] = useState({});
     useEffect(() => {
         fetchBulletin();
-        const interval = setInterval(() => fetchBulletin(), 30000);
+        fetchSystemStatus();
+        const interval = setInterval(() => {
+            fetchBulletin();
+            fetchSystemStatus();
+        }, 30000);
         return () => clearInterval(interval);
     }, [activeMainTab, selectedDate]);
     useEffect(() => {
@@ -30,6 +45,7 @@ export default function Home() {
     }, [user, token]);
     const fetchBulletin = async () => {
         try {
+            setUpdateError(false);
             let data;
             if (activeMainTab === "live") {
                 data = await apiService.getLiveMatches();
@@ -37,13 +53,32 @@ export default function Home() {
                 data = await apiService.getMatches(selectedDate);
             }
             setMatches(data);
+            setLastUpdated(new Date());
         } catch (err) {
             console.error(err);
+            setUpdateError(true);
         }
     };
+    const fetchSystemStatus = async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/system/status`);
+            if (res.ok) {
+                const data = await res.json();
+                setWorkerStatus(data);
+            }
+        } catch (e) {
+            console.error("System status error", e);
+        }
+    };
+
+    const isWorkerDelayed = (isoDateStr) => {
+        if (!isoDateStr) return true;
+        return (Date.now() - new Date(isoDateStr).getTime()) > 120000; // 2 dakika gecikme
+    };
+
     const fetchActiveSlips = async () => {
         try {
-            const res = await fetch(`https://fokolik-api.cengiz.in/slips/my_slips`, {
+            const res = await fetch(`${API_BASE_URL}/slips/my_slips`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             if (res.ok) {
@@ -62,9 +97,6 @@ export default function Home() {
         setSelectedOdds(prev => {
             const exactMatch = prev.find(item => item.odd.id === odd.id);
             if (exactMatch) return prev.filter(item => item.odd.id !== odd.id);
-
-            const matchExists = prev.find(item => item.match.id === match.id);
-            if (matchExists) return prev.map(item => item.match.id === match.id ? { match, odd } : item);
 
             return [...prev, { match, odd }];
         });
@@ -86,7 +118,7 @@ export default function Home() {
         setLoading(true);
         try {
             const oddIds = selectedOdds.map(item => item.odd.id);
-            const res = await fetch(`https://fokolik-api.cengiz.in/slips/`, {
+            const res = await fetch(`${API_BASE_URL}/slips/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -107,22 +139,33 @@ export default function Home() {
             setLoading(false);
         }
     };
-    const handleCancelSlip = async (slipId) => {
-        if (!window.confirm(`Kupon #${slipId} iptal edilecek, emin misiniz?`)) return;
+    const handleCancelSlipRequest = (slipId) => {
+        setCancelModalState({ isOpen: true, slipId });
+    };
+
+    const executeCancelSlip = async () => {
+        const slipId = cancelModalState.slipId;
+        if (!slipId) return;
+
         try {
-            const res = await fetch(`https://fokolik-api.cengiz.in/slips/${slipId}/cancel`, {
+            const res = await fetch(`${API_BASE_URL}/slips/${slipId}/cancel`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             });
             if (res.ok) {
-                toast.success("Kupon iptal edildi ve iade sağlandı.");
-                refreshUserBalance();
+                toast.success("Kupon başarıyla iptal edildi!");
                 fetchActiveSlips();
+                refreshUserBalance();
             } else {
-                toast.error("İptal edilemedi.");
+                const errData = await res.json();
+                toast.error(errData.detail || "İptal işlemi başarısız.");
             }
-        } catch (err) {
-            console.error(err);
+        } catch (error) {
+            toast.error("Bir hata oluştu.");
+        } finally {
+            setCancelModalState({ isOpen: false, slipId: null });
         }
     };
     const isSlipCancelable = (slip) => {
@@ -149,7 +192,7 @@ export default function Home() {
         return d.toLocaleDateString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
     };
     const getDateTabs = () => {
-        const tabs = [{ label: "Tümü", value: null }];
+        const tabs = [];
         const now = new Date();
         for (let i = 0; i < 7; i++) {
             const d = new Date();
@@ -157,8 +200,11 @@ export default function Home() {
             const yyyy = d.getFullYear();
             const mm = String(d.getMonth() + 1).padStart(2, '0');
             const dd = String(d.getDate()).padStart(2, '0');
+            
+            const formattedLabel = d.toLocaleDateString("tr-TR", { day: "numeric", month: "short", weekday: "short" });
+            
             tabs.push({
-                label: i === 0 ? "Bugün" : i === 1 ? "Yarın" : d.toLocaleDateString("tr-TR", { day: "numeric", month: "short" }),
+                label: formattedLabel,
                 value: `${yyyy}-${mm}-${dd}`
             });
         }
@@ -171,9 +217,32 @@ export default function Home() {
             <div className="lg:col-span-2 flex flex-col gap-6">
 
                 <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 transition-colors duration-200">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Güncel Maç Bülteni</h2>
-                        <button onClick={fetchBulletin} className="text-sm font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 cursor-pointer">Yenile</button>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                Güncel Maç Bülteni
+                            </h2>
+                            {workerStatus && (
+                                <div className="flex items-center gap-2 ml-2">
+                                    {/* Bulletin Worker Status */}
+                                    <div className="flex items-center gap-1 text-[10px] bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md border border-slate-100 dark:border-slate-800" title={workerStatus.bulletin_worker?.error || "Bot aktif"}>
+                                        <span className={`w-2 h-2 rounded-full ${workerStatus.bulletin_worker?.status === 'ok' && !isWorkerDelayed(workerStatus.bulletin_worker?.last_sync) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-red-500 animate-pulse'}`}></span>
+                                        <span className="text-slate-500 dark:text-slate-400 font-semibold">Veri Botu</span>
+                                    </div>
+                                    
+                                    {/* Live Worker Status */}
+                                    {activeMainTab === "live" && (
+                                        <div className="flex items-center gap-1 text-[10px] bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md border border-slate-100 dark:border-slate-800" title={workerStatus.live_worker?.error || "Canlı skor botu aktif"}>
+                                            <span className={`w-2 h-2 rounded-full ${workerStatus.live_worker?.status === 'ok' && !isWorkerDelayed(workerStatus.live_worker?.last_sync) ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse' : 'bg-red-500 animate-pulse'}`}></span>
+                                            <span className="text-slate-500 dark:text-slate-400 font-semibold">Canlı Skor Botu</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        <button onClick={fetchBulletin} className="text-sm font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 cursor-pointer self-start sm:self-auto flex items-center gap-1">
+                            Yenile
+                        </button>
                     </div>
 
                     <div className="flex gap-3 mb-4">
@@ -287,16 +356,16 @@ export default function Home() {
 
                                                         <button
                                                             onClick={() => setExpandedMatches(prev => ({ ...prev, [match.id]: !prev[match.id] }))}
-                                                            className="p-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                                                            className="px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
                                                         >
-                                                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                            {isExpanded ? "Gizle" : "+ Daha Fazla"} {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                                         </button>
                                                     </div>
                                                 </div>
                                                 {isExpanded && (
                                                     <div className="mt-4 pt-4 border-t border-slate-150 dark:border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
                                                         {/* Alt/Üst 2.5 */}
-                                                        <div className="bg-slate-50 dark:bg-slate-850/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                                                        <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                                                             <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-2">Alt / Üst (2.5)</span>
                                                             <div className="grid grid-cols-2 gap-2">
                                                                 {["2.5 Alt", "2.5 Üst"].map(betType => {
@@ -321,7 +390,7 @@ export default function Home() {
                                                             </div>
                                                         </div>
                                                         {/* Karşılıklı Gol */}
-                                                        <div className="bg-slate-50 dark:bg-slate-850/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                                                        <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                                                             <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-2">Karşılıklı Gol (KG)</span>
                                                             <div className="grid grid-cols-2 gap-2">
                                                                 {["KG Var", "KG Yok"].map(betType => {
@@ -346,7 +415,7 @@ export default function Home() {
                                                             </div>
                                                         </div>
                                                         {/* İlk Yarı Sonucu */}
-                                                        <div className="bg-slate-50 dark:bg-slate-850/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                                                        <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
                                                             <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-2">İlk Yarı Sonucu (İY)</span>
                                                             <div className="grid grid-cols-3 gap-1.5">
                                                                 {["İY 1", "İY 0", "İY 2"].map(betType => {
@@ -449,24 +518,70 @@ export default function Home() {
             {user && activePendingSlips.length > 0 && (
                 <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end">
                     {isFooterDrawerOpen && (
-                        <div className="w-96 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl mb-4 max-h-[60vh] overflow-y-auto transition-all">
-                            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center sticky top-0 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm z-10 transition-colors">
-                                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2"><Clock size={18} className="text-indigo-500 dark:text-indigo-400" /> Aktif Kuponlar</h3>
-                                <button onClick={() => setIsFooterDrawerOpen(false)} className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"><XCircle size={20} /></button>
+                        <div className="w-[22rem] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl mb-4 max-h-[65vh] overflow-hidden flex flex-col transition-all ring-1 ring-slate-900/5 dark:ring-white/5 animate-fade-in">
+                            <div className="p-4 border-b border-slate-100/50 dark:border-slate-800/50 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/50 dark:to-slate-900/50 relative">
+                                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                    <div className="p-1.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                                        <Clock size={16} />
+                                    </div>
+                                    Canlı Takip
+                                </h3>
+                                <button onClick={() => setIsFooterDrawerOpen(false)} className="p-1.5 text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg transition-colors cursor-pointer"><XCircle size={18} /></button>
                             </div>
-                            <div className="p-4 flex flex-col gap-3">
+                            <div className="p-4 flex flex-col gap-3 overflow-y-auto">
                                 {activePendingSlips.map(slip => (
-                                    <div key={slip.id} className="border border-slate-200 dark:border-slate-800 rounded-xl p-3 bg-slate-50 dark:bg-slate-800/50 transition-colors">
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">#{slip.id}</span>
-                                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{(slip.amount * slip.total_odd).toFixed(2)}</span>
+                                    <div key={slip.id} className="relative overflow-hidden border border-slate-200/80 dark:border-slate-700/50 rounded-xl bg-white dark:bg-slate-800/60 shadow-sm hover:shadow-md transition-all group">
+                                        {/* Decorative left accent */}
+                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500/80 dark:bg-indigo-500/60 rounded-l-xl"></div>
+                                        <div className="p-3 pl-4 flex flex-col gap-2">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-bold text-slate-500 dark:text-slate-400 font-mono tracking-wider">KUPON #{slip.id}</span>
+                                                <span className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100/50 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold rounded-full">
+                                                    {slip.selections.length} Seçim
+                                                </span>
+                                            </div>
+                                            
+                                            <div className="flex items-center justify-between mt-1 bg-slate-50 dark:bg-slate-900/30 p-2 rounded-lg">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-semibold">Tutar / Oran</span>
+                                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-0.5">
+                                                        {slip.amount} <span className="text-slate-400 font-normal mx-0.5">×</span> {slip.total_odd.toFixed(2)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 uppercase font-semibold">Olası Kazanç</span>
+                                                    <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                                        {(slip.amount * slip.total_odd).toFixed(2)}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-1 flex flex-col gap-1.5 border-t border-slate-100 dark:border-slate-700/50 pt-2">
+                                                {slip.selections.map(sel => {
+                                                    const d = sel.odd_details;
+                                                    return (
+                                                        <div key={sel.id} className="flex justify-between items-center text-[10px]">
+                                                            <span className="text-slate-600 dark:text-slate-400 truncate pr-2" title={`${d?.home_team} - ${d?.away_team}`}>
+                                                                {d?.home_team} <span className="text-slate-300 dark:text-slate-600 mx-0.5">-</span> {d?.away_team}
+                                                            </span>
+                                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                                <span className="font-bold text-slate-700 dark:text-slate-300">{d?.bet_type}</span>
+                                                                <span className="text-indigo-600 dark:text-indigo-400 font-mono font-bold">@{d?.odd_value.toFixed(2)}</span>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {isSlipCancelable(slip) && (
+                                                <button 
+                                                    onClick={() => handleCancelSlipRequest(slip.id)} 
+                                                    className="mt-1.5 w-full flex items-center justify-center gap-1 py-1.5 text-xs font-bold border border-red-100 dark:border-red-900/30 text-red-500 hover:text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg cursor-pointer transition-all"
+                                                >
+                                                    İptal Et
+                                                </button>
+                                            )}
                                         </div>
-                                        <div className="text-xs text-slate-600 dark:text-slate-300 font-medium">
-                                            {slip.selections.length} Seçim
-                                        </div>
-                                        {isSlipCancelable(slip) && (
-                                            <button onClick={() => handleCancelSlip(slip.id)} className="w-full mt-2 py-1.5 text-xs font-bold border border-red-200 dark:border-red-900/50 text-red-500 dark:text-red-400 bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-950/20 rounded cursor-pointer transition-colors">İptal Et</button>
-                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -480,6 +595,18 @@ export default function Home() {
                     </button>
                 </div>
             )}
+
+            {/* Confirm Modal */}
+            <ConfirmModal
+                isOpen={cancelModalState.isOpen}
+                onClose={() => setCancelModalState({ isOpen: false, slipId: null })}
+                onConfirm={executeCancelSlip}
+                title="Kupon İptali"
+                message={`#${cancelModalState.slipId} numaralı aktif kuponunuzu iptal etmek istediğinize emin misiniz? (Bu işlem geri alınamaz ve bakiye iade edilir.)`}
+                confirmText="İptal Et"
+                cancelText="Vazgeç"
+                isDestructive={true}
+            />
         </div>
     );
 }

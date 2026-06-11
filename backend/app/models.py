@@ -62,6 +62,7 @@ class SlipSelection(Base):
     id = Column(Integer, primary_key=True, index=True)
     slip_id = Column(Integer, ForeignKey("slips.id", ondelete="CASCADE"), nullable=False)
     odd_id = Column(Integer, ForeignKey("odds.id", ondelete="CASCADE"), nullable=False)
+    odd_value = Column(Float, nullable=False, server_default='1.0')
     status = Column(String, default="pending", nullable=False)  # pending, won, lost
 
     slip = relationship("Slip", back_populates="selections")

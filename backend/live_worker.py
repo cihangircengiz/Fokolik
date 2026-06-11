@@ -15,9 +15,10 @@ import httpx
 import random
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
-from app.models import Match
+from app.models import Match, Odd, Slip, SlipSelection
 from app.settlement import settle_finished_matches
 from app.ws_manager import manager
+from app.telemetry import update_worker_status
 
 if sys.platform.startswith("win"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -148,9 +149,9 @@ def process_live_results(db: Session, results: list) -> tuple:
         if new_status == "live":
             minute_display = dt  # DT contains something like "45'" or time
         elif new_status == "half_time":
-            minute_display = "HT"
+            minute_display = "İY"
         elif new_status == "finished":
-            minute_display = "FT"
+            minute_display = "MS"
 
         # Track if this match just finished
         was_finished_before = db_match.status == "finished"
@@ -262,8 +263,10 @@ def main():
         db = SessionLocal()
         try:
             version = run_cycle(db, version)
+            update_worker_status("live_worker", "ok")
         except Exception as e:
             logger.error(f"Error in live worker cycle: {e}", exc_info=True)
+            update_worker_status("live_worker", "error", str(e))
         finally:
             db.close()
 

@@ -2,6 +2,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import auth, matches, slips
 from .ws_manager import manager
+from .telemetry import get_system_status
 
 app = FastAPI(
     title="Football Betting Simulation API",
@@ -35,6 +36,10 @@ def read_root():
         "message": "Welcome to Football Betting Simulation API!",
         "docs_url": "/docs"
     }
+
+@app.get("/system/status")
+def system_status():
+    return get_system_status()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

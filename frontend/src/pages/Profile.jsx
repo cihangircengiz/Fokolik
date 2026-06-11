@@ -1,20 +1,23 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { API_BASE_URL } from '../services/api';
 import { Receipt, ChevronDown, ChevronUp, AlertCircle, Coins, Clock, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
+import ConfirmModal from '../components/ConfirmModal';
 
 export default function Profile() {
   const { user, token, refreshUserBalance } = useContext(AuthContext);
   const [slips, setSlips] = useState([]);
-  const [activeHistoryTab, setActiveHistoryTab] = useState("all");
+  const [activeHistoryTab, setActiveHistoryTab] = useState("pending");
   const [expandedSlips, setExpandedSlips] = useState({});
   const [loading, setLoading] = useState(true);
+  const [cancelModalState, setCancelModalState] = useState({ isOpen: false, slipId: null });
 
   const fetchSlips = async () => {
     if (!token) return;
     try {
-      const res = await fetch(`https://fokolik-api.cengiz.in/slips/my_slips`, {
+      const res = await fetch(`${API_BASE_URL}/slips/my_slips`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -35,11 +38,16 @@ export default function Profile() {
     refreshUserBalance();
   }, [token]);
 
-  const handleCancelSlip = async (slipId) => {
-    if (!window.confirm(`Kupon #${slipId} iptal edilecek, onaylıyor musunuz?`)) return;
+  const handleCancelSlipRequest = (slipId) => {
+    setCancelModalState({ isOpen: true, slipId });
+  };
+
+  const executeCancelSlip = async () => {
+    const slipId = cancelModalState.slipId;
+    if (!slipId) return;
 
     try {
-      const res = await fetch(`https://fokolik-api.cengiz.in/slips/${slipId}/cancel`, {
+      const res = await fetch(`${API_BASE_URL}/slips/${slipId}/cancel`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -55,6 +63,8 @@ export default function Profile() {
       }
     } catch (error) {
       toast.error("Bir hata oluştu.");
+    } finally {
+      setCancelModalState({ isOpen: false, slipId: null });
     }
   };
 
@@ -123,7 +133,6 @@ export default function Profile() {
           </h2>
           <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg transition-colors duration-200">
             {[
-              { id: "all", label: "Tümü" },
               { id: "pending", label: "Bekleyen" },
               { id: "won", label: "Kazanan" },
               { id: "lost", label: "Kaybeden" },
@@ -160,11 +169,14 @@ export default function Profile() {
               return (
                 <div key={slip.id} className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 bg-white dark:bg-slate-900">
                   {/* Header */}
-                  <div className="bg-slate-50 dark:bg-slate-800 p-4 flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 transition-colors duration-200">
+                  <div 
+                    onClick={() => toggleAccordion(slip.id)}
+                    className="bg-slate-50 dark:bg-slate-800 p-4 flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 transition-colors duration-200 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50"
+                  >
                     <div className="flex items-center gap-4 w-full md:w-auto">
-                      <button onClick={() => toggleAccordion(slip.id)} className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-400 transition-colors cursor-pointer">
+                      <div className="p-1 rounded text-slate-500 dark:text-slate-400 transition-colors">
                         {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-                      </button>
+                      </div>
                       <div>
                         <span className="font-mono font-bold text-slate-700 dark:text-slate-300 text-sm block">KUPON #{slip.id}</span>
                         <span className="text-xs text-slate-500 dark:text-slate-400">{formatDate(slip.created_at)}</span>
@@ -198,7 +210,10 @@ export default function Profile() {
 
                         {cancelable && (
                           <button
-                            onClick={() => handleCancelSlip(slip.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelSlipRequest(slip.id);
+                            }}
                             className="ml-2 text-xs font-bold px-3 py-1.5 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-900/50 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/35 rounded-lg transition-colors cursor-pointer"
                           >
                             İptal Et
@@ -241,6 +256,18 @@ export default function Profile() {
           </div>
         )}
       </div>
+
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={cancelModalState.isOpen}
+        onClose={() => setCancelModalState({ isOpen: false, slipId: null })}
+        onConfirm={executeCancelSlip}
+        title="Kupon İptali"
+        message={`#${cancelModalState.slipId} numaralı kuponunuzu iptal etmek istediğinize emin misiniz? Bakiye anında iade edilecektir.`}
+        confirmText="İptal Et"
+        cancelText="Vazgeç"
+        isDestructive={true}
+      />
     </div>
   );
 }

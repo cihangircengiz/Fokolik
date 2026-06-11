@@ -9,7 +9,9 @@ We filter for football (TYPE=1) and extract the relevant markets/odds.
 import httpx
 import random
 import logging
-from datetime import datetime, timedelta
+import json
+import asyncio
+from datetime import datetime, timedelta, timezone
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("fetcher")
@@ -138,17 +140,21 @@ class NesineFetcher:
                 home_team = event.get("HN", "Ev Sahibi")
                 away_team = event.get("AN", "Deplasman")
 
+                # Define TRT (Turkey Time) timezone
+                TRT = timezone(timedelta(hours=3))
+
                 # Parse start date from epoch milliseconds
                 esd = event.get("ESD", 0)
                 if esd:
-                    start_date = datetime.fromtimestamp(esd / 1000)
+                    start_date = datetime.fromtimestamp(esd / 1000, tz=TRT)
                 else:
                     # Fallback: parse from D and T fields
                     time_str = event.get("T", "00:00")
                     try:
-                        start_date = datetime.strptime(f"{event_date_str} {time_str}", "%d.%m.%Y %H:%M")
+                        naive_dt = datetime.strptime(f"{event_date_str} {time_str}", "%d.%m.%Y %H:%M")
+                        start_date = naive_dt.replace(tzinfo=TRT)
                     except ValueError:
-                        start_date = datetime.now()
+                        start_date = datetime.now(TRT)
 
                 # Extract odds from MA (Markets Array)
                 odds_list = self._extract_odds(event.get("MA", []))

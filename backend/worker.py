@@ -5,6 +5,7 @@ from app.database import SessionLocal, engine
 from app.models import Match, Odd, Base
 from app.config import settings
 from scraper.fetcher import NesineFetcher
+from app.telemetry import update_worker_status
 
 logging.basicConfig(
     level=logging.INFO,
@@ -59,9 +60,11 @@ def update_bulletin(db: Session, fetcher: NesineFetcher):
         
         db.commit()
         logger.info("Database synchronization completed successfully.")
+        update_worker_status("bulletin_worker", "ok")
     except Exception as e:
         db.rollback()
         logger.error(f"Error occurred during bulletin update: {str(e)}", exc_info=True)
+        update_worker_status("bulletin_worker", "error", str(e))
 
 def main():
     logger.info("Initializing bulletin scraper background worker...")

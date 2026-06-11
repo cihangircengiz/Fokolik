@@ -106,13 +106,7 @@ def create_slip(db: Session, slip_data: schemas.SlipCreate, user_id: int):
         odds_to_add.append(odd)
         total_odd *= odd.odd_value
 
-    # Prevent duplicate selections from the same match in a single slip
-    match_ids = [o.match_id for o in odds_to_add]
-    if len(match_ids) != len(set(match_ids)):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A slip cannot contain multiple selections from the same match"
-        )
+    # Same-match restriction removed. A slip can contain multiple selections from the same match.
 
     try:
         # Deduct balance
@@ -133,6 +127,7 @@ def create_slip(db: Session, slip_data: schemas.SlipCreate, user_id: int):
             db_selection = models.SlipSelection(
                 slip_id=db_slip.id,
                 odd_id=odd.id,
+                odd_value=odd.odd_value,
                 status="pending"
             )
             db.add(db_selection)
@@ -163,7 +158,7 @@ def get_slips_by_user(db: Session, user_id: int) -> List[schemas.SlipResponse]:
                     odd_details = schemas.SlipSelectionDetails(
                         id=odd.id,
                         bet_type=odd.bet_type,
-                        odd_value=odd.odd_value,
+                        odd_value=sel.odd_value,
                         match_id=match.id,
                         home_team=match.home_team,
                         away_team=match.away_team,

@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://fokolik-api.cengiz.in";
+export const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 async function def_request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
