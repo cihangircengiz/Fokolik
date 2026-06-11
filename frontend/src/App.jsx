@@ -3,6 +3,9 @@ import { Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
+import Battles from './pages/Battles';
+import BattleDetail from './pages/BattleDetail';
+import UserProfile from './pages/UserProfile';
 
 function App() {
   return (
@@ -12,6 +15,9 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/battles" element={<Battles />} />
+          <Route path="/battles/:inviteCode" element={<BattleDetail />} />
+          <Route path="/users/:username" element={<UserProfile />} />
         </Routes>
       </main>
       <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 text-center text-xs text-slate-500 dark:text-slate-400 mt-auto transition-colors duration-200">

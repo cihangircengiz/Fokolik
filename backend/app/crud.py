@@ -142,55 +142,56 @@ def create_slip(db: Session, slip_data: schemas.SlipCreate, user_id: int):
             detail=f"An error occurred while creating the slip: {str(e)}"
         )
 
-def get_slips_by_user(db: Session, user_id: int) -> List[schemas.SlipResponse]:
-    slips = db.query(models.Slip).filter(models.Slip.user_id == user_id).order_by(models.Slip.created_at.desc()).all()
-    response_slips = []
-
-    for slip in slips:
-        selections_res = []
-        for sel in slip.selections:
-            # Load odd and match details
-            odd = db.query(models.Odd).filter(models.Odd.id == sel.odd_id).first()
-            odd_details = None
-            if odd:
-                match = db.query(models.Match).filter(models.Match.id == odd.match_id).first()
-                if match:
-                    odd_details = schemas.SlipSelectionDetails(
-                        id=odd.id,
-                        bet_type=odd.bet_type,
-                        odd_value=sel.odd_value,
-                        match_id=match.id,
-                        home_team=match.home_team,
-                        away_team=match.away_team,
-                        start_date=match.start_date,
-                        match_status=match.status,
-                        home_score=match.home_score,
-                        away_score=match.away_score,
-                        minute=match.minute,
-                        league=match.league,
-                    )
-            
-            sel_res = schemas.SlipSelectionResponse(
-                id=sel.id,
-                slip_id=sel.slip_id,
-                odd_id=sel.odd_id,
-                status=sel.status,
-                odd_details=odd_details
-            )
-            selections_res.append(sel_res)
-
-        slip_res = schemas.SlipResponse(
-            id=slip.id,
-            user_id=slip.user_id,
-            amount=slip.amount,
-            total_odd=slip.total_odd,
-            status=slip.status,
-            created_at=slip.created_at,
-            selections=selections_res
+def format_slip(db: Session, slip: models.Slip) -> schemas.SlipResponse:
+    selections_res = []
+    for sel in slip.selections:
+        # Load odd and match details
+        odd = db.query(models.Odd).filter(models.Odd.id == sel.odd_id).first()
+        odd_details = None
+        if odd:
+            match = db.query(models.Match).filter(models.Match.id == odd.match_id).first()
+            if match:
+                odd_details = schemas.SlipSelectionDetails(
+                    id=odd.id,
+                    bet_type=odd.bet_type,
+                    odd_value=sel.odd_value,
+                    match_id=match.id,
+                    home_team=match.home_team,
+                    away_team=match.away_team,
+                    start_date=match.start_date,
+                    match_status=match.status,
+                    home_score=match.home_score,
+                    away_score=match.away_score,
+                    minute=match.minute,
+                    league=match.league,
+                )
+        
+        sel_res = schemas.SlipSelectionResponse(
+            id=sel.id,
+            slip_id=sel.slip_id,
+            odd_id=sel.odd_id,
+            status=sel.status,
+            odd_value=sel.odd_value,
+            odd_details=odd_details
         )
-        response_slips.append(slip_res)
+        selections_res.append(sel_res)
 
-    return response_slips
+    return schemas.SlipResponse(
+        id=slip.id,
+        user_id=slip.user_id,
+        amount=slip.amount,
+        total_odd=slip.total_odd,
+        status=slip.status,
+        created_at=slip.created_at,
+        selections=selections_res
+    )
+
+def get_slips_by_user(db: Session, user_id: int, limit: int = None) -> List[schemas.SlipResponse]:
+    query = db.query(models.Slip).filter(models.Slip.user_id == user_id).order_by(models.Slip.created_at.desc())
+    if limit:
+        query = query.limit(limit)
+    slips = query.all()
+    return [format_slip(db, slip) for slip in slips]
 
 def cancel_slip(db: Session, slip_id: int, user_id: int):
     # 1. Fetch Slip

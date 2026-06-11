@@ -76,6 +76,7 @@ class SlipSelectionResponse(BaseModel):
     slip_id: int
     odd_id: int
     status: str
+    odd_value: float = 1.0
     odd_details: Optional[SlipSelectionDetails] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -90,3 +91,46 @@ class SlipResponse(BaseModel):
     selections: List[SlipSelectionResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+# --- Battle Schemas ---
+class BattleCreate(BaseModel):
+    match_ids: List[str]
+    is_public: bool = True
+    max_participants: Optional[int] = None
+
+class BattleParticipantResponse(BaseModel):
+    id: int
+    user_id: int
+    username: str = ""
+    slip_id: int
+    earned_points: int
+    slip: Optional[SlipResponse] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+class BattleResponse(BaseModel):
+    id: int
+    creator_id: int
+    creator_username: str = ""
+    invite_code: str
+    status: str
+    is_public: bool
+    max_participants: Optional[int]
+    created_at: datetime
+    matches: List[MatchResponse] = []
+    participants: List[BattleParticipantResponse] = []
+
+    model_config = ConfigDict(from_attributes=True)
+
+class LeaderboardUser(BaseModel):
+    user_id: int
+    username: str
+    reputation: int
+    monthly_won_battles: int
+
+class UserProfileResponse(BaseModel):
+    user_id: int
+    username: str
+    coin_balance: float
+    reputation: int
+    slips: List[SlipResponse] = []

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, matches, slips
+from .routers import auth, matches, slips, battles, users
 from .ws_manager import manager
 from .telemetry import get_system_status
 
@@ -29,6 +29,8 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(matches.router)
 app.include_router(slips.router)
+app.include_router(battles.router)
+app.include_router(users.router)
 
 @app.get("/")
 def read_root():

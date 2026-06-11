@@ -132,5 +132,68 @@ def settle_finished_matches(db: Session, finished_match_ids: list) -> list:
                 "payout": 0,
             })
 
+    # 4. Check for Battle Completions
+    if affected_slip_ids:
+        # Find all battles that involve these slips
+        affected_participants = db.query(models.BattleParticipant).filter(
+            models.BattleParticipant.slip_id.in_(affected_slip_ids)
+        ).all()
+        affected_battle_ids = set(p.battle_id for p in affected_participants)
+
+        for b_id in affected_battle_ids:
+            battle = db.query(models.Battle).filter(models.Battle.id == b_id).first()
+            if not battle or battle.status != "active":
+                continue
+
+            # Check if ALL participants in this battle have finished slips
+            participants = db.query(models.BattleParticipant).filter(
+                models.BattleParticipant.battle_id == b_id
+            ).all()
+
+            slip_ids_in_battle = [p.slip_id for p in participants]
+            slips_in_battle = db.query(models.Slip).filter(models.Slip.id.in_(slip_ids_in_battle)).all()
+
+            statuses_in_battle = [s.status for s in slips_in_battle]
+            if "pending" in statuses_in_battle:
+                continue  # Battle is still ongoing
+
+            # Battle is finished! Resolve points.
+            logger.info(f"Battle {battle.invite_code} (ID: {battle.id}) has finished. Resolving points...")
+            
+            won_slips = [s for s in slips_in_battle if s.status == "won"]
+            
+            if not won_slips:
+                # Everyone lost
+                logger.info(f"Battle {battle.invite_code} finished with NO winners.")
+                for p in participants:
+                    p.earned_points = 0
+            else:
+                # Find the maximum odds among the winning slips
+                max_odd = max(s.total_odd for s in won_slips)
+                
+                # Find the unique user_ids who hit that max_odd
+                winning_slips = [s for s in won_slips if s.total_odd == max_odd]
+                winning_user_ids = set([s.user_id for s in winning_slips])
+                
+                if len(winning_user_ids) == 1:
+                    # Single winner -> 3 points
+                    winner_id = list(winning_user_ids)[0]
+                    logger.info(f"Battle {battle.invite_code} single winner is User {winner_id} with {max_odd} odds. 3 Points awarded.")
+                    for p in participants:
+                        if p.user_id == winner_id:
+                            p.earned_points = 3
+                        else:
+                            p.earned_points = 0
+                else:
+                    # Tie -> 1 point each
+                    logger.info(f"Battle {battle.invite_code} tie between users {winning_user_ids} with {max_odd} odds. 1 Point each.")
+                    for p in participants:
+                        if p.user_id in winning_user_ids:
+                            p.earned_points = 1
+                        else:
+                            p.earned_points = 0
+
+            battle.status = "completed"
+
     db.commit()
     return settled_slips

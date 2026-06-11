@@ -49,6 +49,12 @@ export default function Navbar() {
           </Link>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            {/* Battles Link */}
+            <Link to="/battles" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300 font-medium border border-transparent hover:border-slate-200 dark:hover:border-slate-800 cursor-pointer">
+              <span className="text-yellow-500">⚔️</span>
+              <span className="hidden sm:inline">Düellolar</span>
+            </Link>
+
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}

@@ -28,6 +28,9 @@ export default function Home() {
     const [expandedOddsGroups, setExpandedOddsGroups] = useState({});
     const [isFooterDrawerOpen, setIsFooterDrawerOpen] = useState(false);
     const [cancelModalState, setCancelModalState] = useState({ isOpen: false, slipId: null });
+    const [battleModalState, setBattleModalState] = useState({ isOpen: false });
+    const [battleIsPublic, setBattleIsPublic] = useState(true);
+    const [battleLimit, setBattleLimit] = useState("");
     const [flashMatches, setFlashMatches] = useState({});
     useEffect(() => {
         fetchBulletin();
@@ -139,6 +142,45 @@ export default function Home() {
             setLoading(false);
         }
     };
+    
+    const handleCreateBattle = async () => {
+        if (!user) {
+            toast.error("Önce giriş yapmalısınız.");
+            return;
+        }
+        const uniqueMatchIds = [...new Set(selectedOdds.map(item => item.match.id))];
+        if (uniqueMatchIds.length < 2 || uniqueMatchIds.length > 5) {
+            toast.error("Düello başlatmak için 2 ile 5 arasında maç seçmelisiniz.");
+            return;
+        }
+        setLoading(true);
+        try {
+            const payload = {
+                match_ids: uniqueMatchIds,
+                is_public: battleIsPublic,
+                max_participants: battleLimit ? parseInt(battleLimit) : null
+            };
+            const res = await fetch(`${API_BASE_URL}/battles/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify(payload)
+            });
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.detail || "Hata");
+            }
+            const data = await res.json();
+            toast.success("Düello başarıyla oluşturuldu!");
+            setBattleModalState({ isOpen: false });
+            setSelectedOdds([]);
+            window.location.href = `/battles/${data.invite_code}`;
+        } catch (err) {
+            toast.error(err.message || "Düello oluşturulamadı.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleCancelSlipRequest = (slipId) => {
         setCancelModalState({ isOpen: true, slipId });
     };
@@ -509,6 +551,16 @@ export default function Home() {
                                 >
                                     <Plus size={20} /> Kuponu Yatır
                                 </button>
+                                
+                                {/* Battle Button */}
+                                {selectedOdds.length >= 2 && selectedOdds.length <= 5 && (
+                                    <button
+                                        onClick={() => setBattleModalState({ isOpen: true })}
+                                        className="w-full mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 rounded-xl shadow-md transition-all flex justify-center items-center gap-2 cursor-pointer border border-indigo-400/30"
+                                    >
+                                        ⚔️ Bu Maçlarla Düello Başlat
+                                    </button>
+                                )}
                             </div>
                         </div>
                     )}
@@ -607,6 +659,61 @@ export default function Home() {
                 cancelText="Vazgeç"
                 isDestructive={true}
             />
+
+            {/* Battle Creation Modal */}
+            {battleModalState.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl max-w-md w-full p-6 animate-scale-in">
+                        <div className="flex justify-between items-center mb-5">
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                ⚔️ Düello Ayarları
+                            </h3>
+                            <button onClick={() => setBattleModalState({ isOpen: false })} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                                <XCircle size={24} />
+                            </button>
+                        </div>
+                        
+                        <div className="space-y-4 mb-6">
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Gizlilik</label>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => setBattleIsPublic(true)}
+                                        className={`flex-1 py-2 rounded-xl border font-bold text-sm transition-all ${battleIsPublic ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}
+                                    >
+                                        🌍 Herkese Açık
+                                    </button>
+                                    <button 
+                                        onClick={() => setBattleIsPublic(false)}
+                                        className={`flex-1 py-2 rounded-xl border font-bold text-sm transition-all ${!battleIsPublic ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}
+                                    >
+                                        🔒 Gizli (Sadece Kodla)
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Kişi Limiti (Opsiyonel)</label>
+                                <input 
+                                    type="number" 
+                                    placeholder="Örn: 10 (Boş bırakırsanız limitsiz olur)"
+                                    value={battleLimit}
+                                    onChange={(e) => setBattleLimit(e.target.value)}
+                                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-slate-100 focus:border-indigo-500 outline-none transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        <button 
+                            onClick={handleCreateBattle}
+                            disabled={loading}
+                            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
+                        >
+                            {loading ? 'Oluşturuluyor...' : 'Düelloyu Başlat'}
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

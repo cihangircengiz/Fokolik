@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, func
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, func, Boolean
 from sqlalchemy.orm import relationship
 from .database import Base
 from datetime import datetime
@@ -67,3 +67,41 @@ class SlipSelection(Base):
 
     slip = relationship("Slip", back_populates="selections")
     odd = relationship("Odd", back_populates="selections")
+
+class Battle(Base):
+    __tablename__ = "battles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    creator_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    invite_code = Column(String, unique=True, index=True, nullable=False)
+    status = Column(String, default="active", nullable=False)  # active, completed
+    is_public = Column(Boolean, default=True, nullable=False)
+    max_participants = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.now, nullable=False)
+
+    creator = relationship("User", foreign_keys=[creator_id])
+    matches = relationship("BattleMatch", back_populates="battle", cascade="all, delete-orphan")
+    participants = relationship("BattleParticipant", back_populates="battle", cascade="all, delete-orphan")
+
+class BattleMatch(Base):
+    __tablename__ = "battle_matches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    battle_id = Column(Integer, ForeignKey("battles.id", ondelete="CASCADE"), nullable=False)
+    match_id = Column(String, ForeignKey("matches.id", ondelete="CASCADE"), nullable=False)
+
+    battle = relationship("Battle", back_populates="matches")
+    match = relationship("Match")
+
+class BattleParticipant(Base):
+    __tablename__ = "battle_participants"
+
+    id = Column(Integer, primary_key=True, index=True)
+    battle_id = Column(Integer, ForeignKey("battles.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    slip_id = Column(Integer, ForeignKey("slips.id", ondelete="CASCADE"), nullable=False)
+    earned_points = Column(Integer, default=0, nullable=False)
+
+    battle = relationship("Battle", back_populates="participants")
+    user = relationship("User")
+    slip = relationship("Slip")
