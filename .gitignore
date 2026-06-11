@@ -1,0 +1,78 @@
+# Root .gitignore for Fokolik project (both backend and frontend)
+
+# --- Python / Backend ---
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+backend/.venv/
+backend/venv/
+
+# Python caching
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+backend/__pycache__/
+backend/app/__pycache__/
+backend/scraper/__pycache__/
+
+# SQLite database & local logs/status
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+backend/*.db
+backend/worker_status.json
+backend/db_odds.json
+
+# --- Node / Frontend ---
+# Dependencies & builds
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+dist/
+dist-ssr/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+frontend/.env
+frontend/.env.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+frontend/*.log
+
+# --- General / OS & Editors ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs / Editors
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.project
+.classpath
+.settings/
