@@ -129,12 +129,18 @@ def get_battle_by_code(invite_code: str, db: Session = Depends(get_db)):
             slip=formatted_slip
         ))
         
+    calculated_status = battle.status
+    if calculated_status == "active":
+        earliest = get_battle_earliest_start(db, battle.id)
+        if earliest and earliest <= datetime.datetime.now():
+            calculated_status = "started"
+
     return schemas.BattleResponse(
         id=battle.id,
         creator_id=battle.creator_id,
         creator_username=creator.username if creator else "",
         invite_code=battle.invite_code,
-        status=battle.status,
+        status=calculated_status,
         is_public=battle.is_public,
         max_participants=battle.max_participants,
         created_at=battle.created_at,

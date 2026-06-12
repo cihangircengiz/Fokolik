@@ -84,7 +84,7 @@ export default function Battles() {
                     <div className="flex justify-between items-center">
                       <div>
                         <div className="text-slate-900 dark:text-white font-bold mb-1">Düello: {b.invite_code}</div>
-                        <div className="text-sm text-slate-500 dark:text-slate-400">{b.matches.length} Maç • {b.status === 'active' ? 'Devam Ediyor' : 'Sonuçlandı'}</div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400">{b.matches.length} Maç • <span className={`font-semibold ${b.status === 'started' ? 'text-amber-500' : b.status === 'completed' ? 'text-rose-500' : 'text-emerald-500'}`}>{b.status === 'active' ? 'Açık (Katılım Bekleniyor)' : b.status === 'started' ? 'Başladı (Oynanıyor)' : 'Sonuçlandı'}</span></div>
                       </div>
                       <div className="text-indigo-600 dark:text-indigo-400 font-bold">
                         Görüntüle ➔

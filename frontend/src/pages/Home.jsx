@@ -312,11 +312,13 @@ export default function Home() {
         const isPastStartTime = new Date(match.start_date) <= new Date();
         const isLiveOrFinished = match.status !== "not_started" || isPastStartTime;
 
-        // Find Odds
-        const getOdd = (type) => match.odds?.find(o => o.bet_type === type);
+        const getOdd = (...types) => match.odds?.find(o => types.includes(o.bet_type));
         const ms1 = getOdd("MS 1");
         const ms0 = getOdd("MS 0");
         const ms2 = getOdd("MS 2");
+        const iy1 = getOdd("İY 1", "IY 1");
+        const iy0 = getOdd("İY 0", "IY 0");
+        const iy2 = getOdd("İY 2", "IY 2");
         const alt25 = getOdd("2.5 Alt");
         const ust25 = getOdd("2.5 Üst");
         const kgVar = getOdd("KG Var");
@@ -342,81 +344,116 @@ export default function Home() {
             );
         };
 
+        const isExpanded = expandedMatches[match.id];
+        const toggleExpand = () => setExpandedMatches(prev => ({ ...prev, [match.id]: !prev[match.id] }));
+
         return (
-            <div key={match.id} className="group relative flex flex-col xl:flex-row xl:items-center justify-between p-2.5 hover:bg-slate-50 dark:hover:bg-[#203630] transition-colors border-b border-slate-100 dark:border-[#1d3330] last:border-0 min-w-0 w-full overflow-hidden">
+            <div key={match.id} className="group relative flex flex-col p-2.5 hover:bg-slate-50 dark:hover:bg-[#203630] transition-colors border-b border-slate-100 dark:border-[#1d3330] last:border-0 min-w-0 w-full overflow-hidden">
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between min-w-0 w-full">
+                    {/* Sol/Orta Alan: Tarih, Durum ve Takımlar Yanyana */}
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
 
-                {/* Sol/Orta Alan: Tarih, Durum ve Takımlar Yanyana */}
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-
-                    {/* Saat ve Durum */}
-                    <div className="flex items-center justify-center gap-2 w-[70px] shrink-0 border-r border-slate-200 dark:border-[#2a453d] pr-2 cursor-help" title={`Son Güncelleme: ${match.updated_at ? new Date(match.updated_at + "Z").toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : 'Bilinmiyor'}`}>
-                        {match.status !== "not_started" && match.status !== "finished" ? (
-                            <>
-                                <span className="text-red-500 dark:text-red-400 font-bold text-xs animate-pulse">
-                                    {match.minute ? (['İY', 'MS', 'Devre'].some(k => match.minute.includes(k)) ? match.minute : `${match.minute}'`) : 'CANLI'}
-                                </span>
-                            </>
-                        ) : match.status === "finished" ? (
-                            <>
-                                <span className="text-slate-500 font-bold text-xs">MS</span>
-                            </>
-                        ) : isPastStartTime ? (
-                            <>
-                                <span className="text-orange-500 dark:text-orange-400 font-bold text-[11px] uppercase tracking-tighter leading-tight" title="Maçkolik'ten veri bekleniyor">
-                                    Başladı
-                                </span>
-                            </>
-                        ) : (
-                            <>
-                                <span className="text-slate-600 dark:text-slate-400 font-semibold text-[13px]">
-                                    {new Date(match.start_date).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                            </>
-                        )}
-                    </div>
-
-                    {/* Takımlar ve Skor (Yatay Hizalı) */}
-                    <div className="flex-1 flex items-center justify-start gap-3 min-w-0 pr-4">
-                        <div className={`flex-1 text-right text-[13px] font-bold truncate ${flashMatches[match.id]?.home ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}>
-                            {match.home_team}
-                        </div>
-
-                        <div className="flex items-center justify-center w-12 shrink-0 bg-slate-100 dark:bg-[#162723] rounded px-2 py-0.5 border border-slate-200 dark:border-[#2a453d]">
-                            {isLiveOrFinished ? (
-                                <div className="flex items-center gap-1 font-mono font-bold text-[13px] text-slate-800 dark:text-slate-200">
-                                    <span className={flashMatches[match.id]?.home ? "text-emerald-500 animate-pulse" : ""}>{match.home_score}</span>
-                                    <span className="text-slate-400">-</span>
-                                    <span className={flashMatches[match.id]?.away ? "text-emerald-500 animate-pulse" : ""}>{match.away_score}</span>
-                                </div>
+                        {/* Saat ve Durum */}
+                        <div className="flex items-center justify-center gap-2 w-[70px] shrink-0 border-r border-slate-200 dark:border-[#2a453d] pr-2 cursor-help" title={`Son Güncelleme: ${match.updated_at ? new Date(match.updated_at + "Z").toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : 'Bilinmiyor'}`}>
+                            {match.status !== "not_started" && match.status !== "finished" ? (
+                                <>
+                                    <span className="text-red-500 dark:text-red-400 font-bold text-xs animate-pulse">
+                                        {match.minute ? (['İY', 'MS', 'Devre'].some(k => match.minute.includes(k)) ? match.minute : `${match.minute}'`) : 'CANLI'}
+                                    </span>
+                                </>
+                            ) : match.status === "finished" ? (
+                                <>
+                                    <span className="text-slate-500 font-bold text-xs">MS</span>
+                                </>
+                            ) : isPastStartTime ? (
+                                <>
+                                    <span className="text-orange-500 dark:text-orange-400 font-bold text-[11px] uppercase tracking-tighter leading-tight" title="Maçkolik'ten veri bekleniyor">
+                                        Başladı
+                                    </span>
+                                </>
                             ) : (
-                                <span className="text-slate-400 dark:text-slate-500 font-bold text-xs">-</span>
+                                <>
+                                    <span className="text-slate-600 dark:text-slate-400 font-semibold text-[13px]">
+                                        {new Date(match.start_date).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                                    </span>
+                                </>
                             )}
                         </div>
 
-                        <div className={`flex-1 text-left text-[13px] font-bold truncate ${flashMatches[match.id]?.away ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}>
-                            {match.away_team}
+                        {/* Takımlar ve Skor (Yatay Hizalı) */}
+                        <div className="flex-1 flex items-center justify-start gap-3 min-w-0 pr-2 sm:pr-4">
+                            <div className={`flex-1 text-right text-[12px] sm:text-[13px] font-bold truncate ${flashMatches[match.id]?.home ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`} title={match.home_team}>
+                                {match.home_team}
+                            </div>
+
+                            <div className="flex items-center justify-center w-10 sm:w-12 shrink-0 bg-slate-100 dark:bg-[#162723] rounded px-1 sm:px-2 py-0.5 border border-slate-200 dark:border-[#2a453d]">
+                                {isLiveOrFinished ? (
+                                    <div className="flex items-center gap-1 font-mono font-bold text-[12px] sm:text-[13px] text-slate-800 dark:text-slate-200">
+                                        <span className={flashMatches[match.id]?.home ? "text-emerald-500 animate-pulse" : ""}>{match.home_score}</span>
+                                        <span className="text-slate-400">-</span>
+                                        <span className={flashMatches[match.id]?.away ? "text-emerald-500 animate-pulse" : ""}>{match.away_score}</span>
+                                    </div>
+                                ) : (
+                                    <span className="text-slate-400 dark:text-slate-500 font-bold text-xs">-</span>
+                                )}
+                            </div>
+
+                            <div className={`flex-1 text-left text-[12px] sm:text-[13px] font-bold truncate ${flashMatches[match.id]?.away ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`} title={match.away_team}>
+                                {match.away_team}
+                            </div>
                         </div>
                     </div>
+
+                    {/* Sağ Alan: Temel Oranlar (Sadece MS) */}
+                    {!isLiveOrFinished && (
+                        <div className="flex items-center justify-start xl:justify-end mt-3 xl:mt-0 overflow-x-auto no-scrollbar w-full xl:w-auto max-w-full">
+                            <div className="flex items-center min-w-max pb-1">
+                                <div className="flex items-center pr-2">
+                                    {renderOddBtn(ms1, "MS 1")}
+                                    {renderOddBtn(ms0, "MS X")}
+                                    {renderOddBtn(ms2, "MS 2")}
+                                </div>
+                                
+                                <button 
+                                    onClick={toggleExpand}
+                                    className="p-1.5 ml-1 mr-1 rounded flex items-center justify-center border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors"
+                                    title="Diğer Oranlar"
+                                >
+                                    {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* Sağ Alan: Oranlar Tablosu */}
-                {!isLiveOrFinished && (
-                    <div className="flex items-center justify-start xl:justify-end mt-3 xl:mt-0 overflow-x-auto no-scrollbar w-full xl:w-auto max-w-full">
-                        <div className="flex items-center min-w-max pb-1">
-                            <div className="flex items-center border-r border-slate-200 dark:border-[#2a453d] pr-2 mr-2">
-                                {renderOddBtn(ms1, "MS 1")}
-                                {renderOddBtn(ms0, "MS X")}
-                                {renderOddBtn(ms2, "MS 2")}
-                            </div>
-
-                            <div className="flex items-center border-r border-slate-200 dark:border-[#2a453d] pr-2 mr-2">
-                                {renderOddBtn(alt25, "2.5 Alt")}
-                                {renderOddBtn(ust25, "2.5 Üst")}
-                            </div>
-
+                {/* Genişletilmiş Oranlar Container */}
+                {isExpanded && !isLiveOrFinished && (
+                    <div className="mt-3 pt-3 border-t border-slate-200 dark:border-[#2a453d] flex flex-wrap gap-x-6 gap-y-4 animate-in slide-in-from-top-2">
+                        {/* İY Oranları */}
+                        <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">İlk Yarı Sonucu</span>
                             <div className="flex items-center">
-                                {renderOddBtn(kgVar, "KG Var")}
-                                {renderOddBtn(kgYok, "KG Yok")}
+                                {renderOddBtn(iy1, "İY 1")}
+                                {renderOddBtn(iy0, "İY X")}
+                                {renderOddBtn(iy2, "İY 2")}
+                            </div>
+                        </div>
+
+                        {/* Alt/Üst Oranları */}
+                        <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Alt / Üst (2.5)</span>
+                            <div className="flex items-center">
+                                {renderOddBtn(alt25, "Alt")}
+                                {renderOddBtn(ust25, "Üst")}
+                            </div>
+                        </div>
+
+                        {/* KG Oranları */}
+                        <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Karşılıklı Gol</span>
+                            <div className="flex items-center">
+                                {renderOddBtn(kgVar, "Var")}
+                                {renderOddBtn(kgYok, "Yok")}
                             </div>
                         </div>
                     </div>

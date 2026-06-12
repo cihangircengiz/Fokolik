@@ -2,6 +2,7 @@ import { useState, useEffect, useContext } from "react";
 import { useParams, Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { API_BASE_URL } from "../services/api";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 export default function BattleDetail({ userBalance, setUserBalance }) {
   const { token, refreshUserBalance } = useContext(AuthContext);
@@ -14,6 +15,7 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
   const [betAmount, setBetAmount] = useState("");
   const [joinError, setJoinError] = useState("");
   const [joinSuccess, setJoinSuccess] = useState(false);
+  const [expandedMatches, setExpandedMatches] = useState({});
 
   useEffect(() => {
     fetchBattle();
@@ -114,6 +116,7 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-3">
               Düello Alanı
               {battle.status === 'completed' && <span className="text-sm bg-rose-500/10 text-rose-600 dark:text-rose-400 px-3 py-1 rounded-full border border-rose-500/30">Sona Erdi</span>}
+              {battle.status === 'started' && <span className="text-sm bg-amber-500/10 text-amber-600 dark:text-amber-400 px-3 py-1 rounded-full border border-amber-500/30">Başladı</span>}
             </h1>
             <p className="text-slate-500 dark:text-slate-400">
               Kurucu: <Link to={`/users/${battle.creator_username}`} className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 hover:underline">{battle.creator_username}</Link> • Davet Kodu: <span className="font-mono text-slate-800 dark:text-white font-bold">{battle.invite_code}</span>
@@ -135,37 +138,124 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
             <span className="text-indigo-505">⚔️</span> Zorunlu Maçlar
           </h2>
           
-          <div className="grid gap-4">
+          <div className="flex flex-col gap-0 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm bg-white dark:bg-slate-900/40 backdrop-blur-md">
             {battle.matches.map(match => {
-              const isSelected = (oddId) => selections[match.id]?.id === oddId;
-              
-              return (
-                <div key={match.id} className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-5 backdrop-blur-md transition-colors duration-200">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="text-slate-950 dark:text-white font-bold">{match.home_team} - {match.away_team}</div>
-                    <div className="text-sm text-slate-550 dark:text-slate-400">{new Date(match.start_date).toLocaleString('tr-TR')}</div>
-                  </div>
-                  
-                  {/* Oranlar */}
-                  <div className="flex flex-wrap gap-2">
-                    {match.odds.map(odd => (
-                      <button
-                        key={odd.id}
-                        disabled={!canJoin}
-                        onClick={() => handleOddClick(match.id, odd)}
-                        className={`flex-1 min-w-[80px] py-2 px-3 rounded-xl border transition-all ${
-                          isSelected(odd.id) 
-                            ? 'bg-indigo-600 border-indigo-550 text-white shadow-md shadow-indigo-900/20' 
-                            : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-indigo-500 dark:hover:border-indigo-400 hover:text-slate-900 dark:hover:text-white'
-                        } ${!canJoin ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <div className="text-xs text-slate-550 dark:text-slate-400 mb-1">{odd.bet_type}</div>
-                        <div className="font-bold">{odd.odd_value.toFixed(2)}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
+                const getOdd = (...types) => match.odds?.find(o => types.includes(o.bet_type));
+                const ms1 = getOdd("MS 1");
+                const ms0 = getOdd("MS 0");
+                const ms2 = getOdd("MS 2");
+                const iy1 = getOdd("İY 1", "IY 1");
+                const iy0 = getOdd("İY 0", "IY 0");
+                const iy2 = getOdd("İY 2", "IY 2");
+                const alt25 = getOdd("2.5 Alt");
+                const ust25 = getOdd("2.5 Üst");
+                const kgVar = getOdd("KG Var");
+                const kgYok = getOdd("KG Yok");
+
+                const isSelected = (oddId) => selections[match.id]?.id === oddId;
+                
+                const renderOddBtn = (oddObj, label) => {
+                    if (!oddObj) return <div className="w-[50px] text-center text-[11px] text-slate-500 bg-slate-50 dark:bg-[#1a2c27] rounded py-1.5 mx-[1px] border border-transparent">-</div>;
+                    const selected = isSelected(oddObj.id);
+                    return (
+                        <button
+                            disabled={!canJoin}
+                            onClick={() => handleOddClick(match.id, oddObj)}
+                            className={`w-[50px] px-1 py-1 rounded flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold transition-all border cursor-pointer mx-[1px] ${selected
+                                ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                                : !canJoin
+                                    ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed"
+                                    : "bg-white dark:bg-[#1a2c27] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#2a453d] hover:border-emerald-500 hover:text-emerald-500"
+                                }`}
+                        >
+                            <span className="text-[9px] opacity-75 font-normal leading-none">{label}</span>
+                            <span className="leading-none">{oddObj.odd_value.toFixed(2)}</span>
+                        </button>
+                    );
+                };
+
+                const isExpanded = expandedMatches[match.id];
+                const toggleExpand = () => setExpandedMatches(prev => ({ ...prev, [match.id]: !prev[match.id] }));
+                const isPastStartTime = new Date(match.start_date) <= new Date();
+
+                return (
+                    <div key={match.id} className="group relative flex flex-col p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-200 dark:border-slate-700/50 last:border-0 min-w-0 w-full overflow-hidden">
+                        <div className="flex flex-col xl:flex-row xl:items-center justify-between min-w-0 w-full">
+                            {/* Sol/Orta Alan */}
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                {/* Saat ve Durum */}
+                                <div className="flex items-center justify-center gap-2 w-[70px] shrink-0 border-r border-slate-200 dark:border-slate-700 pr-2">
+                                    {isPastStartTime ? (
+                                        <span className="text-orange-500 dark:text-orange-400 font-bold text-[11px] uppercase tracking-tighter leading-tight">Başladı</span>
+                                    ) : (
+                                        <span className="text-slate-600 dark:text-slate-400 font-semibold text-[13px]">
+                                            {new Date(match.start_date).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* Takımlar ve Skor */}
+                                <div className="flex-1 flex items-center justify-start gap-3 min-w-0 pr-2 sm:pr-4">
+                                    <div className="flex-1 text-right text-[12px] sm:text-[13px] font-bold truncate text-slate-800 dark:text-slate-200" title={match.home_team}>
+                                        {match.home_team}
+                                    </div>
+                                    <div className="flex items-center justify-center w-10 sm:w-12 shrink-0 bg-slate-100 dark:bg-slate-800 rounded px-1 sm:px-2 py-0.5 border border-slate-200 dark:border-slate-700">
+                                        <span className="text-slate-400 dark:text-slate-500 font-bold text-xs">-</span>
+                                    </div>
+                                    <div className="flex-1 text-left text-[12px] sm:text-[13px] font-bold truncate text-slate-800 dark:text-slate-200" title={match.away_team}>
+                                        {match.away_team}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Sağ Alan: Temel Oranlar (Sadece MS) */}
+                            <div className="flex items-center justify-start xl:justify-end mt-3 xl:mt-0 overflow-x-auto no-scrollbar w-full xl:w-auto max-w-full">
+                                <div className="flex items-center min-w-max pb-1">
+                                    <div className="flex items-center pr-2">
+                                        {renderOddBtn(ms1, "MS 1")}
+                                        {renderOddBtn(ms0, "MS X")}
+                                        {renderOddBtn(ms2, "MS 2")}
+                                    </div>
+                                    <button 
+                                        onClick={toggleExpand}
+                                        className="p-1.5 ml-1 mr-1 rounded flex items-center justify-center border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors"
+                                        title="Diğer Oranlar"
+                                    >
+                                        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Genişletilmiş Oranlar Container */}
+                        {isExpanded && (
+                            <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700/50 flex flex-wrap gap-x-6 gap-y-4 animate-in slide-in-from-top-2">
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">İlk Yarı Sonucu</span>
+                                    <div className="flex items-center">
+                                        {renderOddBtn(iy1, "İY 1")}
+                                        {renderOddBtn(iy0, "İY X")}
+                                        {renderOddBtn(iy2, "İY 2")}
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Alt / Üst (2.5)</span>
+                                    <div className="flex items-center">
+                                        {renderOddBtn(alt25, "Alt")}
+                                        {renderOddBtn(ust25, "Üst")}
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Karşılıklı Gol</span>
+                                    <div className="flex items-center">
+                                        {renderOddBtn(kgVar, "Var")}
+                                        {renderOddBtn(kgYok, "Yok")}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
             })}
           </div>
 
