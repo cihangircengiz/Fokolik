@@ -6,8 +6,10 @@ from apscheduler.triggers.interval import IntervalTrigger
 from app.database import SessionLocal
 from app.ws_manager import manager
 from app.settlement import settle_finished_matches
+from app.telemetry import update_worker_status
 from scraper.mackolik_fetcher import process_mackolik_matches
 from scraper.fetcher import process_nesine_odds
+from datetime import datetime
 
 logger = logging.getLogger("scheduler")
 
@@ -29,8 +31,11 @@ async def job_mackolik_live_updates():
             if settled:
                 for s in settled:
                     await manager.broadcast_slip_settled(s["slip_id"], s["status"], s["user_id"], s["payout"])
+        
+        update_worker_status("live_worker", "ok")
 
     except Exception as e:
+        update_worker_status("live_worker", "error", str(e))
         logger.error(f"Error in Mackolik job: {e}", exc_info=True)
     finally:
         db.close()
@@ -40,7 +45,9 @@ async def job_nesine_odds():
     db = SessionLocal()
     try:
         process_nesine_odds(db)
+        update_worker_status("bulletin_worker", "ok")
     except Exception as e:
+        update_worker_status("bulletin_worker", "error", str(e))
         logger.error(f"Error in Nesine job: {e}", exc_info=True)
     finally:
         db.close()
@@ -53,6 +60,7 @@ def start_scheduler():
         id="mackolik_live_updates",
         name="Mackolik Live Updates",
         replace_existing=True,
+        next_run_time=datetime.now()
     )
     
     scheduler.add_job(
@@ -61,6 +69,7 @@ def start_scheduler():
         id="nesine_odds",
         name="Nesine Odds Matcher",
         replace_existing=True,
+        next_run_time=datetime.now()
     )
     
     scheduler.start()

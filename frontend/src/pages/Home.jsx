@@ -27,7 +27,6 @@ export default function Home() {
     };
 
     const [selectedDate, setSelectedDate] = useState(getTodayDateString());
-    const [activeMainTab, setActiveMainTab] = useState("upcoming");
     const [expandedMatches, setExpandedMatches] = useState({});
     const [expandedOddsGroups, setExpandedOddsGroups] = useState({});
     const [isFooterDrawerOpen, setIsFooterDrawerOpen] = useState(false);
@@ -44,7 +43,7 @@ export default function Home() {
             fetchSystemStatus();
         }, 30000);
         return () => clearInterval(interval);
-    }, [activeMainTab, selectedDate]);
+    }, [selectedDate]);
     useEffect(() => {
         if (user && token) {
             fetchActiveSlips();
@@ -105,12 +104,7 @@ export default function Home() {
     const fetchBulletin = async () => {
         try {
             setUpdateError(false);
-            let data;
-            if (activeMainTab === "live") {
-                data = await apiService.getLiveMatches();
-            } else {
-                data = await apiService.getMatches(selectedDate);
-            }
+            const data = await apiService.getMatches(selectedDate);
             setMatches(data);
             setLastUpdated(new Date());
         } catch (err) {
@@ -130,9 +124,9 @@ export default function Home() {
         }
     };
 
-    const isWorkerDelayed = (isoDateStr) => {
+    const isWorkerDelayed = (isoDateStr, maxAgeMs = 120000) => {
         if (!isoDateStr) return true;
-        return (Date.now() - new Date(isoDateStr).getTime()) > 120000; // 2 dakika gecikme
+        return (Date.now() - new Date(isoDateStr).getTime()) > maxAgeMs;
     };
 
     const fetchActiveSlips = async () => {
@@ -309,6 +303,135 @@ export default function Home() {
         return tabs;
     };
     const activePendingSlips = slips.filter(s => s.status === 'pending');
+
+
+
+    // We pass showLeague as a prop to optionally hide it in grouped views
+    const renderMatch = (match, showLeague = false) => {
+        const isLiveOrFinished = match.status !== "not_started";
+        
+        // Find Odds
+        const getOdd = (type) => match.odds?.find(o => o.bet_type === type);
+        const ms1 = getOdd("MS 1");
+        const ms0 = getOdd("MS 0");
+        const ms2 = getOdd("MS 2");
+        const alt25 = getOdd("2.5 Alt");
+        const ust25 = getOdd("2.5 Üst");
+        const kgVar = getOdd("KG Var");
+        const kgYok = getOdd("KG Yok");
+
+        const renderOddBtn = (oddObj, label) => {
+            if (!oddObj) return <div className="w-[50px] text-center text-[11px] text-slate-500 bg-slate-50 dark:bg-[#1a2c27] rounded py-1.5 mx-[1px] border border-transparent">-</div>;
+            const isSelected = selectedOdds.some(item => item.odd.id === oddObj.id);
+            return (
+                <button
+                    onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, oddObj); }}
+                    disabled={isLiveOrFinished}
+                    className={`w-[50px] px-1 py-1 rounded flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold transition-all border cursor-pointer mx-[1px] ${
+                        isSelected 
+                            ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" 
+                            : isLiveOrFinished 
+                                ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" 
+                                : "bg-white dark:bg-[#1a2c27] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#2a453d] hover:border-emerald-500 hover:text-emerald-500"
+                    }`}
+                >
+                    <span className="text-[9px] opacity-75 font-normal leading-none">{label}</span>
+                    <span className="leading-none">{oddObj.odd_value.toFixed(2)}</span>
+                </button>
+            );
+        };
+
+        return (
+            <div key={match.id} className="group relative flex flex-col xl:flex-row xl:items-center justify-between p-2.5 hover:bg-slate-50 dark:hover:bg-[#203630] transition-colors border-b border-slate-100 dark:border-[#1d3330] last:border-0">
+                
+                {/* Sol/Orta Alan: Tarih, Durum ve Takımlar Yanyana */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                    
+                    {/* Saat ve Durum */}
+                    <div className="flex items-center gap-2 w-[70px] shrink-0 border-r border-slate-200 dark:border-[#2a453d] pr-2">
+                        {isLiveOrFinished && match.status !== "finished" ? (
+                            <>
+                                <span className="text-red-500 dark:text-red-400 font-bold text-xs animate-pulse">
+                                    {match.minute ? `${match.minute}'` : 'CANLI'}
+                                </span>
+                            </>
+                        ) : match.status === "finished" ? (
+                            <>
+                                <span className="text-slate-500 font-bold text-xs">MS</span>
+                            </>
+                        ) : (
+                            <>
+                                <span className="text-slate-600 dark:text-slate-400 font-semibold text-[13px]">
+                                    {new Date(match.start_date).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Takımlar ve Skor (Yatay Hizalı) */}
+                    <div className="flex-1 flex items-center justify-start gap-3 min-w-0 pr-4">
+                        <div className={`flex-1 text-right text-[13px] font-bold truncate ${flashMatches[match.id]?.home ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}>
+                            {match.home_team}
+                        </div>
+                        
+                        <div className="flex items-center justify-center w-12 shrink-0 bg-slate-100 dark:bg-[#162723] rounded px-2 py-0.5 border border-slate-200 dark:border-[#2a453d]">
+                            {isLiveOrFinished ? (
+                                <div className="flex items-center gap-1 font-mono font-bold text-[13px] text-slate-800 dark:text-slate-200">
+                                    <span className={flashMatches[match.id]?.home ? "text-emerald-500 animate-pulse" : ""}>{match.home_score}</span>
+                                    <span className="text-slate-400">-</span>
+                                    <span className={flashMatches[match.id]?.away ? "text-emerald-500 animate-pulse" : ""}>{match.away_score}</span>
+                                </div>
+                            ) : (
+                                <span className="text-slate-400 dark:text-slate-500 font-bold text-xs">-</span>
+                            )}
+                        </div>
+
+                        <div className={`flex-1 text-left text-[13px] font-bold truncate ${flashMatches[match.id]?.away ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}>
+                            {match.away_team}
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sağ Alan: Oranlar Tablosu */}
+                {!isLiveOrFinished && (
+                    <div className="flex items-center justify-end mt-3 xl:mt-0 shrink-0 overflow-x-auto no-scrollbar">
+                        <div className="flex items-center border-r border-slate-200 dark:border-[#2a453d] pr-2 mr-2">
+                            {renderOddBtn(ms1, "MS 1")}
+                            {renderOddBtn(ms0, "MS X")}
+                            {renderOddBtn(ms2, "MS 2")}
+                        </div>
+                        
+                        <div className="flex items-center border-r border-slate-200 dark:border-[#2a453d] pr-2 mr-2">
+                            {renderOddBtn(alt25, "2.5 Alt")}
+                            {renderOddBtn(ust25, "2.5 Üst")}
+                        </div>
+
+                        <div className="flex items-center">
+                            {renderOddBtn(kgVar, "KG Var")}
+                            {renderOddBtn(kgYok, "KG Yok")}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+    const liveMatches = matches.filter(m => ["live", "half_time", "live_1h", "live_2h"].includes(m.status));
+    const upcomingMatches = matches.filter(m => m.status === "not_started");
+    
+    // Group upcoming matches by league
+    const groupedUpcoming = upcomingMatches.reduce((acc, match) => {
+        const league = match.league || "Diğer Ligler";
+        if (!acc[league]) acc[league] = [];
+        acc[league].push(match);
+        return acc;
+    }, {});
+
+    // Sort leagues by the earliest match in the league
+    const sortedLeagues = Object.entries(groupedUpcoming).sort((a, b) => {
+        const earliestA = Math.min(...a[1].map(m => new Date(m.start_date).getTime()));
+        const earliestB = Math.min(...b[1].map(m => new Date(m.start_date).getTime()));
+        return earliestA - earliestB;
+    });
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* LEFT CONTENT */}
@@ -324,17 +447,15 @@ export default function Home() {
                                 <div className="flex items-center gap-2 ml-2">
                                     {/* Bulletin Worker Status */}
                                     <div className="flex items-center gap-1 text-[10px] bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md border border-slate-100 dark:border-slate-800" title={workerStatus.bulletin_worker?.error || "Bot aktif"}>
-                                        <span className={`w-2 h-2 rounded-full ${workerStatus.bulletin_worker?.status === 'ok' && !isWorkerDelayed(workerStatus.bulletin_worker?.last_sync) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-red-500 animate-pulse'}`}></span>
+                                        <span className={`w-2 h-2 rounded-full ${workerStatus.bulletin_worker?.status === 'ok' && !isWorkerDelayed(workerStatus.bulletin_worker?.last_sync, 43200000) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-red-500 animate-pulse'}`}></span>
                                         <span className="text-slate-500 dark:text-slate-400 font-semibold">Veri Botu</span>
                                     </div>
                                     
                                     {/* Live Worker Status */}
-                                    {activeMainTab === "live" && (
-                                        <div className="flex items-center gap-1 text-[10px] bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md border border-slate-100 dark:border-slate-800" title={workerStatus.live_worker?.error || "Canlı skor botu aktif"}>
-                                            <span className={`w-2 h-2 rounded-full ${workerStatus.live_worker?.status === 'ok' && !isWorkerDelayed(workerStatus.live_worker?.last_sync) ? 'bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse' : 'bg-red-500 animate-pulse'}`}></span>
-                                            <span className="text-slate-500 dark:text-slate-400 font-semibold">Canlı Skor Botu</span>
-                                        </div>
-                                    )}
+                                    <div className="flex items-center gap-1 text-[10px] bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md border border-slate-100 dark:border-slate-800" title={workerStatus.live_worker?.error || "Canlı skor botu aktif"}>
+                                        <span className={`w-2 h-2 rounded-full ${workerStatus.live_worker?.status === 'ok' && !isWorkerDelayed(workerStatus.live_worker?.last_sync, 120000) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse' : 'bg-red-500 animate-pulse'}`}></span>
+                                        <span className="text-slate-500 dark:text-slate-400 font-semibold">Canlı Skor Botu</span>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -343,28 +464,7 @@ export default function Home() {
                         </button>
                     </div>
 
-                    <div className="flex gap-3 mb-4">
-                        <button
-                            onClick={() => setActiveMainTab("live")}
-                            className={`flex-1 sm:flex-none px-6 py-2 rounded-xl font-bold text-sm transition-all border cursor-pointer ${activeMainTab === "live" ? "bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-900/50" : "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
-                        >
-                            Canlı Maçlar
-                        </button>
-                        <button
-                            onClick={() => setActiveMainTab("upcoming")}
-                            className={`flex-1 sm:flex-none px-6 py-2 rounded-xl font-bold text-sm transition-all border cursor-pointer ${activeMainTab === "upcoming" ? "bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900/50" : "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
-                        >
-                            Yaklaşan Maçlar
-                        </button>
-                    </div>
-                    {activeMainTab === "live" && (
-                        <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-lg text-amber-700 dark:text-amber-300 text-sm transition-colors duration-200">
-                            <Info size={18} />
-                            <span>Canlı maç verileri <strong>60 saniye</strong> gecikmeli gelmektedir.</span>
-                        </div>
-                    )}
-                    {activeMainTab === "upcoming" && (
-                        <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
                             {getDateTabs().map(tab => (
                                 <button
                                     key={tab.label}
@@ -374,176 +474,69 @@ export default function Home() {
                                     {tab.label}
                                 </button>
                             ))}
-                        </div>
-                    )}
+                    </div>
                 </div>
-                {/* Match List */}
+
                 {matches.length === 0 ? (
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-12 text-center text-slate-500 dark:text-slate-400 transition-colors duration-200">
                         <HelpCircle className="w-10 h-10 mx-auto mb-3 text-slate-300 dark:text-slate-700" />
                         <p>Maç bulunamadı.</p>
                     </div>
                 ) : (
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-200">
-                        <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {[...matches]
-                                .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
-                                .map(match => {
-                                    const isExpanded = expandedMatches[match.id];
-                                    const isLiveOrFinished = match.status !== "not_started";
+                    <div className="flex flex-col gap-6">
+                        {/* Live Matches Section */}
+                        {liveMatches.length > 0 && (
+                            <div>
+                                <h3 className="text-[11px] font-bold mb-0 flex items-center gap-2 text-white bg-slate-800 dark:bg-[#162723] px-3 py-2 rounded-t-lg shadow-sm border border-b-0 border-slate-200 dark:border-[#2a453d] uppercase tracking-wider">
+                                    <span className="animate-pulse w-2 h-2 bg-red-500 rounded-full"></span>
+                                    Canlı Maç Programı
+                                </h3>
+                                <div className="bg-white dark:bg-[#1a2c27] rounded-b-lg shadow-sm border border-slate-200 dark:border-[#2a453d] overflow-hidden transition-colors duration-200">
+                                    <div className="flex flex-col">
+                                        {liveMatches
+                                            .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+                                            .map(m => renderMatch(m, true))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
-                                    return (
-                                        <div key={match.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors duration-150">
-                                            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium mb-1.5 flex-wrap">
-                                                        <div className="flex items-center gap-1">
-                                                            <Calendar size={14} /> {formatDate(match.start_date)}
-                                                        </div>
-                                                        <span className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
-                                                            {match.league || "Diğer Ligler"}
-                                                        </span>
-                                                        {match.status === "finished" && <span className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded font-bold">MS</span>}
-                                                        {isLiveOrFinished && match.status !== "finished" && (
-                                                            <span className="bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span> CANLI
-                                                                {match.minute && <span className="text-emerald-600 dark:text-emerald-400 font-bold">{match.minute}'</span>}
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    <div className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-3">
-                                                        <span className={flashMatches[match.id]?.home ? "text-emerald-500 dark:text-emerald-400 transition-colors duration-300" : ""}>{match.home_team}</span>
-                                                        {isLiveOrFinished ? (
-                                                            <div className={`px-2 py-0.5 rounded-md border font-mono text-sm transition-all duration-300 flex items-center gap-1 ${
-                                                                (flashMatches[match.id]?.home || flashMatches[match.id]?.away)
-                                                                    ? "bg-emerald-500 text-white border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)] scale-110" 
-                                                                    : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
-                                                            }`}>
-                                                                <span className={flashMatches[match.id]?.home ? "animate-pulse font-extrabold" : ""}>{match.home_score}</span>
-                                                                <span>-</span>
-                                                                <span className={flashMatches[match.id]?.away ? "animate-pulse font-extrabold" : ""}>{match.away_score}</span>
-                                                            </div>
-                                                        ) : <span className="text-slate-400 dark:text-slate-550 font-normal text-xs px-2">vs</span>}
-                                                        <span className={flashMatches[match.id]?.away ? "text-emerald-500 dark:text-emerald-400 transition-colors duration-300" : ""}>{match.away_team}</span>
-                                                    </div>
+                        {/* Upcoming Matches Section */}
+                        {sortedLeagues.length > 0 && (
+                            <div>
+                                <h3 className="text-[11px] font-bold mb-0 flex items-center gap-2 text-white bg-slate-800 dark:bg-[#162723] px-3 py-2 rounded-t-lg shadow-sm border border-b-0 border-slate-200 dark:border-[#2a453d] uppercase tracking-wider">
+                                    <Calendar size={14} />
+                                    Maç Programı
+                                </h3>
+                                <div className="bg-white dark:bg-[#1a2c27] rounded-b-lg shadow-sm border border-slate-200 dark:border-[#2a453d] overflow-hidden transition-colors duration-200">
+                                    {sortedLeagues.map(([league, lgMatches]) => (
+                                        <div key={league} className="flex flex-col border-b border-slate-200 dark:border-[#2a453d] last:border-0">
+                                            {/* League Header */}
+                                            <div className="flex items-center justify-between bg-slate-100 dark:bg-[#1d3330] px-3 py-1.5 text-[10px] font-bold text-slate-700 dark:text-slate-300">
+                                                <div className="flex items-center gap-1.5">
+                                                    <Globe size={12} className="text-slate-400" />
+                                                    <span className="uppercase tracking-wider">{league}</span>
                                                 </div>
-
-                                                <div className="flex items-center gap-2">
-                                                    {/* MS Odds */}
-                                                    <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-lg transition-colors duration-200">
-                                                        {["MS 1", "MS 0", "MS 2"].map(betType => {
-                                                            const odd = match.odds.find(o => o.bet_type === betType);
-                                                            if (!odd) return <div key={betType} className="w-12 h-8"></div>;
-                                                            const isSelected = selectedOdds.some(item => item.odd.id === odd.id);
-                                                            return (
-                                                                <button
-                                                                    key={odd.id}
-                                                                    onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
-                                                                    disabled={isLiveOrFinished}
-                                                                    className={`px-2 py-1 rounded-md min-w-[50px] flex items-center justify-center gap-1 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-md" :
-                                                                        isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
-                                                                            "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
-                                                                        }`}
-                                                                >
-                                                                    <span className={isSelected ? "text-indigo-100" : "text-slate-400 dark:text-slate-500 text-[10px]"}>{betType.replace("MS ", "")}</span>
-                                                                    <span>{odd.odd_value.toFixed(2)}</span>
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() => setExpandedMatches(prev => ({ ...prev, [match.id]: !prev[match.id] }))}
-                                                        className="px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
-                                                    >
-                                                        {isExpanded ? "Gizle" : "+ Daha Fazla"} {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                    </button>
-                                                </div>
+                                                <span className="font-normal opacity-70">Bugün</span>
                                             </div>
-                                            {isExpanded && (
-                                                <div className="mt-4 pt-4 border-t border-slate-150 dark:border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
-                                                    {/* Alt/Üst 2.5 */}
-                                                    <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                                                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-2">Alt / Üst (2.5)</span>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            {["2.5 Alt", "2.5 Üst"].map(betType => {
-                                                                const odd = match.odds.find(o => o.bet_type === betType);
-                                                                if (!odd) return <div key={betType} className="text-xs text-slate-400 text-center py-2 bg-white dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800">-</div>;
-                                                                const isSelected = selectedOdds.some(item => item.odd.id === odd.id);
-                                                                return (
-                                                                    <button
-                                                                        key={odd.id}
-                                                                        onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
-                                                                        disabled={isLiveOrFinished}
-                                                                        className={`px-3 py-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" :
-                                                                            isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
-                                                                                "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
-                                                                            }`}
-                                                                    >
-                                                                        <span className="text-[10px] text-slate-400 dark:text-slate-550 font-normal">{betType}</span>
-                                                                        <span>{odd.odd_value.toFixed(2)}</span>
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                    {/* Karşılıklı Gol */}
-                                                    <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                                                        <span className="text-xs font-bold text-slate-400 dark:text-slate-550 uppercase block mb-2">Karşılıklı Gol (KG)</span>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            {["KG Var", "KG Yok"].map(betType => {
-                                                                const odd = match.odds.find(o => o.bet_type === betType);
-                                                                if (!odd) return <div key={betType} className="text-xs text-slate-400 text-center py-2 bg-white dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800">-</div>;
-                                                                const isSelected = selectedOdds.some(item => item.odd.id === odd.id);
-                                                                return (
-                                                                    <button
-                                                                        key={odd.id}
-                                                                        onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
-                                                                        disabled={isLiveOrFinished}
-                                                                        className={`px-3 py-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" :
-                                                                            isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
-                                                                                "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
-                                                                            }`}
-                                                                    >
-                                                                        <span className="text-[10px] text-slate-400 dark:text-slate-550 font-normal">{betType}</span>
-                                                                        <span>{odd.odd_value.toFixed(2)}</span>
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                    {/* İlk Yarı Sonucu */}
-                                                    <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                                                        <span className="text-xs font-bold text-slate-400 dark:text-slate-550 uppercase block mb-2">İlk Yarı Sonucu (İY)</span>
-                                                        <div className="grid grid-cols-3 gap-1.5">
-                                                            {["İY 1", "İY 0", "İY 2"].map(betType => {
-                                                                const odd = match.odds.find(o => o.bet_type === betType);
-                                                                if (!odd) return <div key={betType} className="text-xs text-slate-400 text-center py-2 bg-white dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800">-</div>;
-                                                                const isSelected = selectedOdds.some(item => item.odd.id === odd.id);
-                                                                return (
-                                                                    <button
-                                                                        key={odd.id}
-                                                                        onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
-                                                                        disabled={isLiveOrFinished}
-                                                                        className={`px-2 py-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" :
-                                                                            isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
-                                                                                "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
-                                                                            }`}
-                                                                    >
-                                                                        <span className="text-[9px] text-slate-400 dark:text-slate-550 font-normal">{betType}</span>
-                                                                        <span>{odd.odd_value.toFixed(2)}</span>
-                                                                    </button>
-                                                                );
-                                                            })}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
+                                            {/* League Matches */}
+                                            <div className="flex flex-col">
+                                                {lgMatches
+                                                    .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+                                                    .map(m => renderMatch(m, false))}
+                                            </div>
                                         </div>
-                                    );
-                                })}
-                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        
+                        {liveMatches.length === 0 && sortedLeagues.length === 0 && (
+                            <div className="bg-white dark:bg-[#1a2c27] border border-slate-200 dark:border-[#2a453d] rounded-2xl p-12 text-center text-slate-500 dark:text-slate-400 transition-colors duration-200">
+                                <HelpCircle className="w-10 h-10 mx-auto mb-3 text-slate-300 dark:text-[#2a453d]" />
+                                <p>Bu kriterlere uygun maç bulunamadı.</p>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

@@ -47,9 +47,7 @@ def main():
 
     # Başlatılacak komutlar
     commands = [
-        [uvicorn_exe, "app.main:app", "--host", "0.0.0.0", "--port", "8000"],
-        [python_exe, "worker.py"],
-        [python_exe, "live_mackolik_scraper.py"]
+        [uvicorn_exe, "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
     ]
 
     # Komutları arka planda başlat
