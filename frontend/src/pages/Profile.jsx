@@ -95,16 +95,6 @@ export default function Profile() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* Back to Home Button */}
-      <div className="mb-6">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
-        >
-          <ArrowLeft size={16} /> Ana Sayfaya Dön
-        </Link>
-      </div>
-
       {/* Profile Header */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 mb-8 flex flex-col md:flex-row items-center justify-between gap-4 transition-colors duration-200">
         <div>
@@ -131,7 +121,7 @@ export default function Profile() {
             <Receipt className="w-6 h-6 text-indigo-500 dark:text-indigo-400" />
             Kupon Geçmişim
           </h2>
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg transition-colors duration-200">
+          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg transition-colors duration-200 overflow-x-auto max-w-full no-scrollbar">
             {[
               { id: "pending", label: "Bekleyen" },
               { id: "won", label: "Kazanan" },
@@ -141,9 +131,9 @@ export default function Profile() {
               <button
                 key={tab.id}
                 onClick={() => setActiveHistoryTab(tab.id)}
-                className={`px-3 py-1.5 sm:px-4 rounded-md text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeHistoryTab === tab.id
-                    ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
+                className={`whitespace-nowrap px-3 py-1.5 sm:px-4 rounded-md text-xs sm:text-sm font-semibold transition-all cursor-pointer ${activeHistoryTab === tab.id
+                  ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 shadow-sm"
+                  : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
                   }`}
               >
                 {tab.label}
@@ -169,7 +159,7 @@ export default function Profile() {
               return (
                 <div key={slip.id} className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 bg-white dark:bg-slate-900">
                   {/* Header */}
-                  <div 
+                  <div
                     onClick={() => toggleAccordion(slip.id)}
                     className="bg-slate-50 dark:bg-slate-800 p-4 flex flex-col md:flex-row items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 transition-colors duration-200 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50"
                   >
@@ -186,7 +176,7 @@ export default function Profile() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                    <div className="flex flex-wrap items-center gap-y-3 gap-x-6 w-full md:w-auto justify-between md:justify-end mt-2 md:mt-0">
                       <div className="flex items-center gap-4 text-xs font-mono text-slate-600 dark:text-slate-400">
                         <div>
                           <span className="text-[10px] uppercase block text-slate-400 dark:text-slate-550">Tutar</span>
@@ -202,7 +192,7 @@ export default function Profile() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {slip.status === "pending" && <span className="px-2 py-1 bg-amber-100 dark:bg-amber-950/35 text-amber-700 dark:text-amber-400 text-xs font-bold rounded-md flex items-center gap-1 transition-colors duration-200"><Clock size={12} /> Bekliyor</span>}
                         {slip.status === "won" && <span className="px-2 py-1 bg-emerald-100 dark:bg-emerald-950/35 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-md transition-colors duration-200">Kazandı</span>}
                         {slip.status === "lost" && <span className="px-2 py-1 bg-red-100 dark:bg-red-950/35 text-red-700 dark:text-red-400 text-xs font-bold rounded-md transition-colors duration-200">Kaybetti</span>}
@@ -214,7 +204,7 @@ export default function Profile() {
                               e.stopPropagation();
                               handleCancelSlipRequest(slip.id);
                             }}
-                            className="ml-2 text-xs font-bold px-3 py-1.5 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-900/50 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/35 rounded-lg transition-colors cursor-pointer"
+                            className="ml-0 md:ml-2 text-xs font-bold px-3 py-1.5 bg-white dark:bg-slate-800 border border-red-200 dark:border-red-900/50 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/35 rounded-lg transition-colors cursor-pointer whitespace-nowrap"
                           >
                             İptal Et
                           </button>

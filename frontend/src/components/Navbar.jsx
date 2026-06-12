@@ -48,9 +48,9 @@ export default function Navbar() {
             </span>
           </Link>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1 sm:gap-4">
             {/* Battles Link */}
-            <Link to="/battles" className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300 font-medium border border-transparent hover:border-slate-200 dark:hover:border-slate-800 cursor-pointer">
+            <Link to="/battles" className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300 font-medium border border-transparent hover:border-slate-200 dark:hover:border-slate-800 cursor-pointer">
               <span className="text-yellow-500">⚔️</span>
               <span className="hidden sm:inline">Düellolar</span>
             </Link>
@@ -58,35 +58,35 @@ export default function Navbar() {
             {/* Theme Toggle Button */}
             <button
               onClick={toggleTheme}
-              className="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 cursor-pointer"
+              className="p-1.5 sm:p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700 cursor-pointer"
               title={theme === 'dark' ? 'Açık Tema' : 'Karanlık Tema'}
             >
-              {theme === 'dark' ? <Sun className="w-5 h-5 text-amber-500" /> : <Moon className="w-5 h-5 text-indigo-500" />}
+              {theme === 'dark' ? <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500" />}
             </button>
 
             {user ? (
-              <div className="flex items-center gap-2 sm:gap-4">
+              <div className="flex items-center gap-1 sm:gap-4">
                 {/* Balance Card */}
-                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-lg shadow-sm transition-colors duration-200">
-                  <Coins className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                <div className="flex items-center gap-1 sm:gap-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 sm:px-3 py-1.5 rounded-lg shadow-sm transition-colors duration-200">
+                  <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-500 dark:text-emerald-400" />
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-sm sm:text-base">
                     {(user.coin_balance ?? user.balance ?? 0).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}
                   </span>
                   <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 hidden sm:inline">Coin</span>
                 </div>
                 
                 {/* Profile Link */}
-                <Link to="/profile" className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300 font-medium border border-transparent hover:border-slate-200 dark:hover:border-slate-800">
-                  <User className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+                <Link to="/profile" className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-300 font-medium border border-transparent hover:border-slate-200 dark:hover:border-slate-800">
+                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-500 dark:text-indigo-400" />
                   <span className="hidden sm:inline">Profilim</span>
                 </Link>
 
                 <button 
                   onClick={logout}
-                  className="p-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 rounded-lg transition-colors border border-transparent hover:border-red-100 dark:hover:border-red-900/50 cursor-pointer"
+                  className="p-1.5 sm:p-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 rounded-lg transition-colors border border-transparent hover:border-red-100 dark:hover:border-red-900/50 cursor-pointer"
                   title="Çıkış Yap"
                 >
-                  <LogOut className="w-5 h-5" />
+                  <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
             ) : (

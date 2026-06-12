@@ -12,7 +12,7 @@ export default function Home() {
     const matches = useMatchStore((state) => state.matches);
     const setMatches = useMatchStore((state) => state.setMatches);
     const updateMatches = useMatchStore((state) => state.updateMatches);
-    
+
     const [slips, setSlips] = useState([]); // Only for active slips footer
     const [selectedOdds, setSelectedOdds] = useState([]);
     const [betAmount, setBetAmount] = useState("10");
@@ -30,6 +30,7 @@ export default function Home() {
     const [expandedMatches, setExpandedMatches] = useState({});
     const [expandedOddsGroups, setExpandedOddsGroups] = useState({});
     const [isFooterDrawerOpen, setIsFooterDrawerOpen] = useState(false);
+    const [isMobileSlipOpen, setIsMobileSlipOpen] = useState(false);
     const [cancelModalState, setCancelModalState] = useState({ isOpen: false, slipId: null });
     const [battleModalState, setBattleModalState] = useState({ isOpen: false });
     const [battleIsPublic, setBattleIsPublic] = useState(true);
@@ -55,7 +56,7 @@ export default function Home() {
         const ws = apiService.connectWebSocket(async (msg) => {
             if (msg.type === "match_updates") {
                 const currentMatches = useMatchStore.getState().matches;
-                
+
                 msg.data.forEach((update) => {
                     const m = currentMatches.find((item) => item.id === update.id);
                     if (m) {
@@ -79,7 +80,7 @@ export default function Home() {
                         }
                     }
                 });
-                
+
                 updateMatches(msg.data);
             } else if (msg.type === "slip_settled") {
                 if (user && msg.data.user_id === user.id) {
@@ -192,7 +193,7 @@ export default function Home() {
             setLoading(false);
         }
     };
-    
+
     const handleCreateBattle = async () => {
         if (!user) {
             toast.error("Önce giriş yapmalısınız.");
@@ -286,15 +287,15 @@ export default function Home() {
     const getDateTabs = () => {
         const tabs = [];
         const now = new Date();
-        for (let i = 0; i < 7; i++) {
+        for (let i = 0; i < 3; i++) {
             const d = new Date();
             d.setDate(now.getDate() + i);
             const yyyy = d.getFullYear();
             const mm = String(d.getMonth() + 1).padStart(2, '0');
             const dd = String(d.getDate()).padStart(2, '0');
-            
+
             const formattedLabel = d.toLocaleDateString("tr-TR", { day: "numeric", month: "short", weekday: "short" });
-            
+
             tabs.push({
                 label: formattedLabel,
                 value: `${yyyy}-${mm}-${dd}`
@@ -310,7 +311,7 @@ export default function Home() {
     const renderMatch = (match, showLeague = false) => {
         const isPastStartTime = new Date(match.start_date) <= new Date();
         const isLiveOrFinished = match.status !== "not_started" || isPastStartTime;
-        
+
         // Find Odds
         const getOdd = (type) => match.odds?.find(o => o.bet_type === type);
         const ms1 = getOdd("MS 1");
@@ -328,13 +329,12 @@ export default function Home() {
                 <button
                     onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, oddObj); }}
                     disabled={isLiveOrFinished}
-                    className={`w-[50px] px-1 py-1 rounded flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold transition-all border cursor-pointer mx-[1px] ${
-                        isSelected 
-                            ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" 
-                            : isLiveOrFinished 
-                                ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" 
-                                : "bg-white dark:bg-[#1a2c27] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#2a453d] hover:border-emerald-500 hover:text-emerald-500"
-                    }`}
+                    className={`w-[50px] px-1 py-1 rounded flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold transition-all border cursor-pointer mx-[1px] ${isSelected
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                        : isLiveOrFinished
+                            ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed"
+                            : "bg-white dark:bg-[#1a2c27] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#2a453d] hover:border-emerald-500 hover:text-emerald-500"
+                        }`}
                 >
                     <span className="text-[9px] opacity-75 font-normal leading-none">{label}</span>
                     <span className="leading-none">{oddObj.odd_value.toFixed(2)}</span>
@@ -343,11 +343,11 @@ export default function Home() {
         };
 
         return (
-            <div key={match.id} className="group relative flex flex-col xl:flex-row xl:items-center justify-between p-2.5 hover:bg-slate-50 dark:hover:bg-[#203630] transition-colors border-b border-slate-100 dark:border-[#1d3330] last:border-0">
-                
+            <div key={match.id} className="group relative flex flex-col xl:flex-row xl:items-center justify-between p-2.5 hover:bg-slate-50 dark:hover:bg-[#203630] transition-colors border-b border-slate-100 dark:border-[#1d3330] last:border-0 min-w-0 w-full overflow-hidden">
+
                 {/* Sol/Orta Alan: Tarih, Durum ve Takımlar Yanyana */}
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                    
+
                     {/* Saat ve Durum */}
                     <div className="flex items-center gap-2 w-[70px] shrink-0 border-r border-slate-200 dark:border-[#2a453d] pr-2">
                         {match.status !== "not_started" && match.status !== "finished" ? (
@@ -380,7 +380,7 @@ export default function Home() {
                         <div className={`flex-1 text-right text-[13px] font-bold truncate ${flashMatches[match.id]?.home ? "text-emerald-500 dark:text-emerald-400" : "text-slate-800 dark:text-slate-200"}`}>
                             {match.home_team}
                         </div>
-                        
+
                         <div className="flex items-center justify-center w-12 shrink-0 bg-slate-100 dark:bg-[#162723] rounded px-2 py-0.5 border border-slate-200 dark:border-[#2a453d]">
                             {isLiveOrFinished ? (
                                 <div className="flex items-center gap-1 font-mono font-bold text-[13px] text-slate-800 dark:text-slate-200">
@@ -401,21 +401,23 @@ export default function Home() {
 
                 {/* Sağ Alan: Oranlar Tablosu */}
                 {!isLiveOrFinished && (
-                    <div className="flex items-center justify-end mt-3 xl:mt-0 shrink-0 overflow-x-auto no-scrollbar">
-                        <div className="flex items-center border-r border-slate-200 dark:border-[#2a453d] pr-2 mr-2">
-                            {renderOddBtn(ms1, "MS 1")}
-                            {renderOddBtn(ms0, "MS X")}
-                            {renderOddBtn(ms2, "MS 2")}
-                        </div>
-                        
-                        <div className="flex items-center border-r border-slate-200 dark:border-[#2a453d] pr-2 mr-2">
-                            {renderOddBtn(alt25, "2.5 Alt")}
-                            {renderOddBtn(ust25, "2.5 Üst")}
-                        </div>
+                    <div className="flex items-center justify-start xl:justify-end mt-3 xl:mt-0 overflow-x-auto no-scrollbar w-full xl:w-auto max-w-full">
+                        <div className="flex items-center min-w-max pb-1">
+                            <div className="flex items-center border-r border-slate-200 dark:border-[#2a453d] pr-2 mr-2">
+                                {renderOddBtn(ms1, "MS 1")}
+                                {renderOddBtn(ms0, "MS X")}
+                                {renderOddBtn(ms2, "MS 2")}
+                            </div>
 
-                        <div className="flex items-center">
-                            {renderOddBtn(kgVar, "KG Var")}
-                            {renderOddBtn(kgYok, "KG Yok")}
+                            <div className="flex items-center border-r border-slate-200 dark:border-[#2a453d] pr-2 mr-2">
+                                {renderOddBtn(alt25, "2.5 Alt")}
+                                {renderOddBtn(ust25, "2.5 Üst")}
+                            </div>
+
+                            <div className="flex items-center">
+                                {renderOddBtn(kgVar, "KG Var")}
+                                {renderOddBtn(kgYok, "KG Yok")}
+                            </div>
                         </div>
                     </div>
                 )}
@@ -424,7 +426,7 @@ export default function Home() {
     };
     const liveMatches = matches.filter(m => ["live", "half_time", "live_1h", "live_2h"].includes(m.status));
     const upcomingMatches = matches.filter(m => m.status === "not_started");
-    
+
     // Group upcoming matches by league
     const groupedUpcoming = upcomingMatches.reduce((acc, match) => {
         const league = match.league || "Diğer Ligler";
@@ -444,7 +446,7 @@ export default function Home() {
             {/* LEFT CONTENT */}
             <div className="lg:col-span-2 flex flex-col gap-6">
 
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-6 transition-colors duration-200">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 p-3 sm:p-6 transition-colors duration-200">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
                         <div className="flex items-center gap-3">
                             <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
@@ -457,7 +459,7 @@ export default function Home() {
                                         <span className={`w-2 h-2 rounded-full ${workerStatus.bulletin_worker?.status === 'ok' && !isWorkerDelayed(workerStatus.bulletin_worker?.last_sync, 43200000) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]' : 'bg-red-500 animate-pulse'}`}></span>
                                         <span className="text-slate-500 dark:text-slate-400 font-semibold">Veri Botu</span>
                                     </div>
-                                    
+
                                     {/* Live Worker Status */}
                                     <div className="flex items-center gap-1 text-[10px] bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md border border-slate-100 dark:border-slate-800" title={workerStatus.live_worker?.error || "Canlı skor botu aktif"}>
                                         <span className={`w-2 h-2 rounded-full ${workerStatus.live_worker?.status === 'ok' && !isWorkerDelayed(workerStatus.live_worker?.last_sync, 120000) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse' : 'bg-red-500 animate-pulse'}`}></span>
@@ -466,21 +468,18 @@ export default function Home() {
                                 </div>
                             )}
                         </div>
-                        <button onClick={fetchBulletin} className="text-sm font-bold text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 cursor-pointer self-start sm:self-auto flex items-center gap-1">
-                            Yenile
-                        </button>
                     </div>
 
                     <div className="flex gap-2 overflow-x-auto pb-4 no-scrollbar">
-                            {getDateTabs().map(tab => (
-                                <button
-                                    key={tab.label}
-                                    onClick={() => setSelectedDate(tab.value)}
-                                    className={`px-4 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap border cursor-pointer transition-all ${selectedDate === tab.value ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600 dark:border-indigo-600" : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
+                        {getDateTabs().map(tab => (
+                            <button
+                                key={tab.label}
+                                onClick={() => setSelectedDate(tab.value)}
+                                className={`px-4 py-1.5 rounded-lg text-sm font-semibold whitespace-nowrap border cursor-pointer transition-all ${selectedDate === tab.value ? "bg-indigo-600 text-white border-indigo-600 dark:bg-indigo-600 dark:border-indigo-600" : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -524,7 +523,6 @@ export default function Home() {
                                                     <Globe size={12} className="text-slate-400" />
                                                     <span className="uppercase tracking-wider">{league}</span>
                                                 </div>
-                                                <span className="font-normal opacity-70">Bugün</span>
                                             </div>
                                             {/* League Matches */}
                                             <div className="flex flex-col">
@@ -537,7 +535,7 @@ export default function Home() {
                                 </div>
                             </div>
                         )}
-                        
+
                         {liveMatches.length === 0 && sortedLeagues.length === 0 && (
                             <div className="bg-white dark:bg-[#1a2c27] border border-slate-200 dark:border-[#2a453d] rounded-2xl p-12 text-center text-slate-500 dark:text-slate-400 transition-colors duration-200">
                                 <HelpCircle className="w-10 h-10 mx-auto mb-3 text-slate-300 dark:text-[#2a453d]" />
@@ -548,8 +546,14 @@ export default function Home() {
                 )}
             </div>
             {/* RIGHT CONTENT - Bet Slip */}
-            <div className="lg:col-span-1">
-                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sticky top-24 shadow-sm transition-colors duration-200">
+            <div className={`lg:col-span-1 ${isMobileSlipOpen ? 'fixed inset-0 z-50 flex items-end bg-slate-900/60 backdrop-blur-sm lg:static lg:bg-transparent lg:block' : 'hidden lg:block'}`}>
+                {isMobileSlipOpen && <div className="absolute inset-0 lg:hidden" onClick={() => setIsMobileSlipOpen(false)}></div>}
+                <div className="w-full bg-white dark:bg-slate-900 lg:border border-slate-200 dark:border-slate-800 rounded-t-3xl lg:rounded-2xl p-6 lg:sticky lg:top-24 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.3)] lg:shadow-sm transition-all duration-300 relative max-h-[85vh] lg:max-h-none flex flex-col">
+                    {isMobileSlipOpen && (
+                        <button onClick={() => setIsMobileSlipOpen(false)} className="lg:hidden absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer">
+                            <XCircle size={24} />
+                        </button>
+                    )}
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-4 mb-4 flex items-center justify-between transition-colors duration-200">
                         <div className="flex items-center gap-2">
                             <Receipt className="w-5 h-5 text-indigo-500" /> Bahis Kuponu
@@ -606,7 +610,7 @@ export default function Home() {
                                 >
                                     <Plus size={20} /> Kuponu Yatır
                                 </button>
-                                
+
                                 {/* Battle Button */}
                                 {selectedOdds.length >= 2 && selectedOdds.length <= 5 && (
                                     <button
@@ -621,11 +625,31 @@ export default function Home() {
                     )}
                 </div>
             </div>
+
+            {/* Mobile Sticky Bar to Open Slip */}
+            {!isMobileSlipOpen && selectedOdds.length > 0 && (
+                <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-4 pb-safe shadow-[0_-5px_15px_-5px_rgba(0,0,0,0.1)] flex justify-between items-center animate-fade-in">
+                    <div onClick={() => setIsMobileSlipOpen(true)} className="flex-1 cursor-pointer">
+                        <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Seçilen Maç</div>
+                        <div className="text-lg font-black text-indigo-600 dark:text-indigo-400">{selectedOdds.length} Seçim</div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div onClick={() => setIsMobileSlipOpen(true)} className="text-right cursor-pointer">
+                            <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase">Toplam Oran</div>
+                            <div className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">{formattedTotalOdd}</div>
+                        </div>
+                        <button onClick={() => setIsMobileSlipOpen(true)} className="bg-emerald-600 text-white p-3 rounded-xl shadow-lg hover:bg-emerald-700 transition-colors cursor-pointer">
+                            <Plus size={20} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Sticky Active Slips Footer */}
             {user && activePendingSlips.length > 0 && (
-                <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end">
+                <div className={`fixed right-4 lg:right-6 z-40 flex flex-col items-end transition-all duration-300 ${!isMobileSlipOpen && selectedOdds.length > 0 ? "bottom-24 lg:bottom-6" : "bottom-6"}`}>
                     {isFooterDrawerOpen && (
-                        <div className="w-[22rem] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl mb-4 max-h-[65vh] overflow-hidden flex flex-col transition-all ring-1 ring-slate-900/5 dark:ring-white/5 animate-fade-in">
+                        <div className="w-[calc(100vw-2rem)] sm:w-[22rem] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 rounded-2xl shadow-2xl mb-4 max-h-[60vh] overflow-hidden flex flex-col transition-all ring-1 ring-slate-900/5 dark:ring-white/5 animate-fade-in">
                             <div className="p-4 border-b border-slate-100/50 dark:border-slate-800/50 flex justify-between items-center bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/50 dark:to-slate-900/50 relative">
                                 <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
                                     <div className="p-1.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg">
@@ -647,7 +671,7 @@ export default function Home() {
                                                     {slip.selections.length} Seçim
                                                 </span>
                                             </div>
-                                            
+
                                             <div className="flex items-center justify-between mt-1 bg-slate-50 dark:bg-slate-900/30 p-2 rounded-lg">
                                                 <div className="flex flex-col">
                                                     <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase font-semibold">Tutar / Oran</span>
@@ -681,8 +705,8 @@ export default function Home() {
                                             </div>
 
                                             {isSlipCancelable(slip) && (
-                                                <button 
-                                                    onClick={() => handleCancelSlipRequest(slip.id)} 
+                                                <button
+                                                    onClick={() => handleCancelSlipRequest(slip.id)}
                                                     className="mt-1.5 w-full flex items-center justify-center gap-1 py-1.5 text-xs font-bold border border-red-100 dark:border-red-900/30 text-red-500 hover:text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg cursor-pointer transition-all"
                                                 >
                                                     İptal Et
@@ -727,18 +751,18 @@ export default function Home() {
                                 <XCircle size={24} />
                             </button>
                         </div>
-                        
+
                         <div className="space-y-4 mb-6">
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Gizlilik</label>
                                 <div className="flex gap-2">
-                                    <button 
+                                    <button
                                         onClick={() => setBattleIsPublic(true)}
                                         className={`flex-1 py-2 rounded-xl border font-bold text-sm transition-all ${battleIsPublic ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}
                                     >
                                         🌍 Herkese Açık
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => setBattleIsPublic(false)}
                                         className={`flex-1 py-2 rounded-xl border font-bold text-sm transition-all ${!battleIsPublic ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}
                                     >
@@ -746,11 +770,11 @@ export default function Home() {
                                     </button>
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Kişi Limiti (Opsiyonel)</label>
-                                <input 
-                                    type="number" 
+                                <input
+                                    type="number"
                                     placeholder="Örn: 10 (Boş bırakırsanız limitsiz olur)"
                                     value={battleLimit}
                                     onChange={(e) => setBattleLimit(e.target.value)}
@@ -759,7 +783,7 @@ export default function Home() {
                             </div>
                         </div>
 
-                        <button 
+                        <button
                             onClick={handleCreateBattle}
                             disabled={loading}
                             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
