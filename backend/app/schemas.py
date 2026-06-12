@@ -36,6 +36,7 @@ class MatchResponse(MatchBase):
     ht_home_score: int = 0
     ht_away_score: int = 0
     league: str = "Bilinmeyen Lig"
+    updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 

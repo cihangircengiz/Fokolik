@@ -349,7 +349,7 @@ export default function Home() {
                 <div className="flex items-center gap-3 flex-1 min-w-0">
 
                     {/* Saat ve Durum */}
-                    <div className="flex items-center gap-2 w-[70px] shrink-0 border-r border-slate-200 dark:border-[#2a453d] pr-2">
+                    <div className="flex items-center justify-center gap-2 w-[70px] shrink-0 border-r border-slate-200 dark:border-[#2a453d] pr-2 cursor-help" title={`Son Güncelleme: ${match.updated_at ? new Date(match.updated_at + "Z").toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : 'Bilinmiyor'}`}>
                         {match.status !== "not_started" && match.status !== "finished" ? (
                             <>
                                 <span className="text-red-500 dark:text-red-400 font-bold text-xs animate-pulse">

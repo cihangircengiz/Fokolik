@@ -30,6 +30,7 @@ class Match(Base):
     ht_home_score = Column(Integer, default=0, nullable=False)  # Half-time home score
     ht_away_score = Column(Integer, default=0, nullable=False)  # Half-time away score
     is_on_mackolik = Column(Boolean, default=False, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     odds = relationship("Odd", back_populates="match", cascade="all, delete-orphan")
 
