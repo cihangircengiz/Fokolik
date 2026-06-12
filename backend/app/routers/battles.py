@@ -2,7 +2,7 @@ import uuid
 import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, case
 from typing import List
 
 from app import models, schemas, crud
@@ -87,7 +87,7 @@ def get_leaderboard(db: Session = Depends(get_db)):
         models.BattleParticipant.user_id,
         models.User.username,
         func.sum(models.BattleParticipant.earned_points).label("reputation"),
-        func.count(models.BattleParticipant.id).filter(models.BattleParticipant.earned_points > 0).label("won_battles")
+        func.sum(case((models.BattleParticipant.earned_points > 0, 1), else_=0)).label("won_battles")
     ).join(models.User, models.User.id == models.BattleParticipant.user_id)\
      .join(models.Battle, models.Battle.id == models.BattleParticipant.battle_id)\
      .filter(models.Battle.created_at >= start_of_month)\

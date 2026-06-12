@@ -11,13 +11,17 @@ app = FastAPI(
     version="2.0.0"
 )
 
+from .config import settings
+
 @app.on_event("startup")
 def startup_event():
-    start_scheduler()
+    if settings.ENABLE_WORKERS:
+        start_scheduler()
 
 @app.on_event("shutdown")
 def shutdown_event():
-    stop_scheduler()
+    if settings.ENABLE_WORKERS:
+        stop_scheduler()
 
 
 # Configure CORS so our React frontend can connect

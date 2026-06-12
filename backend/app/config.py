@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     NESINE_API_URL: str = "https://cdnbulten.nesine.com/api/bulten/getprebultenfull"
     MACKOLIK_JSON_URL: str = "https://www.mackolik.com/perform/p0/ajax/components/competition/livescores/json"
     SCRAPE_INTERVAL_SECONDS: int = 60
+    ENABLE_WORKERS: bool = True
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
