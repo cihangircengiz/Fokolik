@@ -1,11 +1,11 @@
 {
     "bulletin_worker": {
-        "last_sync": "2026-06-11T17:30:16.681251+00:00",
+        "last_sync": "2026-06-12T08:39:43.852027+00:00",
         "status": "ok",
         "error": null
     },
     "live_worker": {
-        "last_sync": "2026-06-11T17:30:05.121944+00:00",
+        "last_sync": "2026-06-12T08:40:20.914551+00:00",
         "status": "ok",
         "error": null
     }

@@ -29,6 +29,7 @@ class Match(Base):
     minute = Column(String, default="", nullable=False)  # e.g. "45+2", "HT", "90", "FT"
     ht_home_score = Column(Integer, default=0, nullable=False)  # Half-time home score
     ht_away_score = Column(Integer, default=0, nullable=False)  # Half-time away score
+    is_on_mackolik = Column(Boolean, default=False, nullable=False)
 
     odds = relationship("Odd", back_populates="match", cascade="all, delete-orphan")
 

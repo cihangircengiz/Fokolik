@@ -1,4 +1,4 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from .routers import auth, matches, slips, battles, users
 from .ws_manager import manager
@@ -42,6 +42,20 @@ def read_root():
 @app.get("/system/status")
 def system_status():
     return get_system_status()
+
+@app.post("/system/broadcast")
+async def system_broadcast(request: Request):
+    """
+    Internal API endpoint for background services to broadcast WebSocket events.
+    Restricted to localhost (127.0.0.1 / ::1) for security.
+    """
+    client_host = request.client.host
+    if client_host not in ("127.0.0.1", "localhost", "::1"):
+        raise HTTPException(status_code=403, detail="Forbidden")
+        
+    payload = await request.json()
+    await manager.broadcast(payload)
+    return {"status": "success"}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

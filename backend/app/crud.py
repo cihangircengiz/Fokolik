@@ -35,7 +35,8 @@ def get_matches(db: Session, date_str: str = None, skip: int = 0, limit: int = 1
             start_of_day = datetime.combine(target_date, datetime.min.time())
             end_of_day = datetime.combine(target_date, datetime.max.time())
             return db.query(models.Match).filter(
-                models.Match.start_date.between(start_of_day, end_of_day)
+                models.Match.start_date.between(start_of_day, end_of_day),
+                models.Match.is_on_mackolik == True
             ).order_by(models.Match.start_date.asc()).offset(skip).limit(limit).all()
         except ValueError:
             pass  # Fallback to default if date string is invalid
@@ -43,7 +44,8 @@ def get_matches(db: Session, date_str: str = None, skip: int = 0, limit: int = 1
     # Default: Show matches starting from today's midnight onwards
     today_start = datetime.combine(datetime.now().date(), datetime.min.time())
     return db.query(models.Match).filter(
-        models.Match.start_date >= today_start
+        models.Match.start_date >= today_start,
+        models.Match.is_on_mackolik == True
     ).order_by(models.Match.start_date.asc()).offset(skip).limit(limit).all()
 
 def get_match(db: Session, match_id: str):
@@ -52,7 +54,8 @@ def get_match(db: Session, match_id: str):
 def get_live_matches(db: Session):
     """Get all matches that are currently live or at half time."""
     return db.query(models.Match).filter(
-        models.Match.status.in_(["live", "live_1h", "live_2h", "half_time"])
+        models.Match.status.in_(["live", "live_1h", "live_2h", "half_time"]),
+        models.Match.is_on_mackolik == True
     ).order_by(models.Match.start_date.asc()).all()
 
 # --- Slip (Kupon) CRUD ---

@@ -46,6 +46,67 @@ export default function Home() {
             fetchActiveSlips();
         }
     }, [user, token]);
+
+    // Connect to WebSocket for real-time score updates and coupon outcomes
+    useEffect(() => {
+        const ws = apiService.connectWebSocket(async (msg) => {
+            if (msg.type === "match_updates") {
+                setMatches((prevMatches) => {
+                    return prevMatches.map((m) => {
+                        const update = msg.data.find((item) => item.id === m.id);
+                        if (update) {
+                            const homeScoreChanged = update.home_score !== m.home_score;
+                            const awayScoreChanged = update.away_score !== m.away_score;
+                            if (homeScoreChanged || awayScoreChanged) {
+                                setFlashMatches((prev) => ({
+                                    ...prev,
+                                    [m.id]: {
+                                        home: homeScoreChanged,
+                                        away: awayScoreChanged,
+                                    },
+                                }));
+                                // Clear flash animation after 3s
+                                setTimeout(() => {
+                                    setFlashMatches((prev) => {
+                                        const copy = { ...prev };
+                                        delete copy[m.id];
+                                        return copy;
+                                    });
+                                }, 3000);
+                            }
+                            return {
+                                ...m,
+                                status: update.status,
+                                home_score: update.home_score,
+                                away_score: update.away_score,
+                                minute: update.minute,
+                                ht_home_score: update.ht_home_score,
+                                ht_away_score: update.ht_away_score,
+                            };
+                        }
+                        return m;
+                    });
+                });
+            } else if (msg.type === "slip_settled") {
+                if (user && msg.data.user_id === user.id) {
+                    if (msg.data.status === "won") {
+                        toast.success(`Tebrikler! Kupon #${msg.data.slip_id} kazandı ve hesabınıza ${msg.data.payout} Coin yatırıldı! 🎉`, { duration: 10000 });
+                    } else {
+                        toast.error(`Kupon #${msg.data.slip_id} sonuçlandı ve kaybetti. ❌`, { duration: 10000 });
+                    }
+                    refreshUserBalance();
+                    fetchActiveSlips();
+                }
+            }
+        });
+
+        return () => {
+            if (ws) {
+                ws.close();
+            }
+        };
+    }, [user?.id, token]);
+
     const fetchBulletin = async () => {
         try {
             setUpdateError(false);
@@ -328,167 +389,166 @@ export default function Home() {
                         <p>Maç bulunamadı.</p>
                     </div>
                 ) : (
-                    <div className="flex flex-col gap-6">
-                        {Object.entries(getGroupedMatches()).map(([league, leagueMatches]) => (
-                            <div key={league} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-200">
-                                <div className="bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between transition-colors duration-200">
-                                    <div className="flex items-center gap-2">
-                                        <Globe className="w-4 h-4 text-emerald-500" />
-                                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">{league}</span>
-                                    </div>
-                                    <span className="text-xs font-semibold text-slate-400 dark:text-slate-550">{leagueMatches.length} Maç</span>
-                                </div>
+                    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors duration-200">
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {[...matches]
+                                .sort((a, b) => new Date(a.start_date) - new Date(b.start_date))
+                                .map(match => {
+                                    const isExpanded = expandedMatches[match.id];
+                                    const isLiveOrFinished = match.status !== "not_started";
 
-                                <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {leagueMatches.map(match => {
-                                        const isExpanded = expandedMatches[match.id];
-                                        const isLiveOrFinished = match.status !== "not_started";
-
-                                        return (
-                                            <div key={match.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors duration-150">
-                                                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium mb-1.5">
-                                                            <div className="flex items-center gap-1">
-                                                                <Calendar size={14} /> {formatDate(match.start_date)}
-                                                            </div>
-                                                            {match.status === "finished" && <span className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded font-bold">MS</span>}
-                                                            {isLiveOrFinished && match.status !== "finished" && (
-                                                                <span className="bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span> CANLI
-                                                                </span>
-                                                            )}
-                                                            {match.minute && <span className="text-emerald-600 dark:text-emerald-400 font-bold">{match.minute}</span>}
+                                    return (
+                                        <div key={match.id} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors duration-150">
+                                            <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium mb-1.5 flex-wrap">
+                                                        <div className="flex items-center gap-1">
+                                                            <Calendar size={14} /> {formatDate(match.start_date)}
                                                         </div>
-
-                                                        <div className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-3">
-                                                            <span>{match.home_team}</span>
-                                                            {isLiveOrFinished ? (
-                                                                <div className="bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-mono text-sm transition-colors duration-200">
-                                                                    {match.home_score} - {match.away_score}
-                                                                </div>
-                                                            ) : <span className="text-slate-400 dark:text-slate-500 font-normal text-xs px-2">vs</span>}
-                                                            <span>{match.away_team}</span>
-                                                        </div>
+                                                        <span className="bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">
+                                                            {match.league || "Diğer Ligler"}
+                                                        </span>
+                                                        {match.status === "finished" && <span className="bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded font-bold">MS</span>}
+                                                        {isLiveOrFinished && match.status !== "finished" && (
+                                                            <span className="bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400 px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span> CANLI
+                                                                {match.minute && <span className="text-emerald-600 dark:text-emerald-400 font-bold">{match.minute}'</span>}
+                                                            </span>
+                                                        )}
                                                     </div>
 
-                                                    <div className="flex items-center gap-2">
-                                                        {/* MS Odds */}
-                                                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-lg transition-colors duration-200">
-                                                            {["MS 1", "MS 0", "MS 2"].map(betType => {
+                                                    <div className="text-base font-bold text-slate-800 dark:text-slate-200 flex items-center gap-3">
+                                                        <span className={flashMatches[match.id]?.home ? "text-emerald-500 dark:text-emerald-400 transition-colors duration-300" : ""}>{match.home_team}</span>
+                                                        {isLiveOrFinished ? (
+                                                            <div className={`px-2 py-0.5 rounded-md border font-mono text-sm transition-all duration-300 flex items-center gap-1 ${
+                                                                (flashMatches[match.id]?.home || flashMatches[match.id]?.away)
+                                                                    ? "bg-emerald-500 text-white border-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)] scale-110" 
+                                                                    : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                                                            }`}>
+                                                                <span className={flashMatches[match.id]?.home ? "animate-pulse font-extrabold" : ""}>{match.home_score}</span>
+                                                                <span>-</span>
+                                                                <span className={flashMatches[match.id]?.away ? "animate-pulse font-extrabold" : ""}>{match.away_score}</span>
+                                                            </div>
+                                                        ) : <span className="text-slate-400 dark:text-slate-550 font-normal text-xs px-2">vs</span>}
+                                                        <span className={flashMatches[match.id]?.away ? "text-emerald-500 dark:text-emerald-400 transition-colors duration-300" : ""}>{match.away_team}</span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    {/* MS Odds */}
+                                                    <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/80 p-1 rounded-lg transition-colors duration-200">
+                                                        {["MS 1", "MS 0", "MS 2"].map(betType => {
+                                                            const odd = match.odds.find(o => o.bet_type === betType);
+                                                            if (!odd) return <div key={betType} className="w-12 h-8"></div>;
+                                                            const isSelected = selectedOdds.some(item => item.odd.id === odd.id);
+                                                            return (
+                                                                <button
+                                                                    key={odd.id}
+                                                                    onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
+                                                                    disabled={isLiveOrFinished}
+                                                                    className={`px-2 py-1 rounded-md min-w-[50px] flex items-center justify-center gap-1 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-md" :
+                                                                        isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
+                                                                            "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                                                        }`}
+                                                                >
+                                                                    <span className={isSelected ? "text-indigo-100" : "text-slate-400 dark:text-slate-500 text-[10px]"}>{betType.replace("MS ", "")}</span>
+                                                                    <span>{odd.odd_value.toFixed(2)}</span>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => setExpandedMatches(prev => ({ ...prev, [match.id]: !prev[match.id] }))}
+                                                        className="px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
+                                                    >
+                                                        {isExpanded ? "Gizle" : "+ Daha Fazla"} {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {isExpanded && (
+                                                <div className="mt-4 pt-4 border-t border-slate-150 dark:border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
+                                                    {/* Alt/Üst 2.5 */}
+                                                    <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                                                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-2">Alt / Üst (2.5)</span>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            {["2.5 Alt", "2.5 Üst"].map(betType => {
                                                                 const odd = match.odds.find(o => o.bet_type === betType);
-                                                                if (!odd) return <div key={betType} className="w-12 h-8"></div>;
+                                                                if (!odd) return <div key={betType} className="text-xs text-slate-400 text-center py-2 bg-white dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800">-</div>;
                                                                 const isSelected = selectedOdds.some(item => item.odd.id === odd.id);
                                                                 return (
                                                                     <button
                                                                         key={odd.id}
                                                                         onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
                                                                         disabled={isLiveOrFinished}
-                                                                        className={`px-2 py-1 rounded-md min-w-[50px] flex items-center justify-center gap-1 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-md" :
+                                                                        className={`px-3 py-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" :
                                                                             isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
-                                                                                "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                                                                "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
                                                                             }`}
                                                                     >
-                                                                        <span className={isSelected ? "text-indigo-100" : "text-slate-400 dark:text-slate-500 text-[10px]"}>{betType.replace("MS ", "")}</span>
+                                                                        <span className="text-[10px] text-slate-400 dark:text-slate-550 font-normal">{betType}</span>
                                                                         <span>{odd.odd_value.toFixed(2)}</span>
                                                                     </button>
                                                                 );
                                                             })}
                                                         </div>
-
-                                                        <button
-                                                            onClick={() => setExpandedMatches(prev => ({ ...prev, [match.id]: !prev[match.id] }))}
-                                                            className="px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-lg bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer flex items-center gap-2 text-xs font-bold"
-                                                        >
-                                                            {isExpanded ? "Gizle" : "+ Daha Fazla"} {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                        </button>
+                                                    </div>
+                                                    {/* Karşılıklı Gol */}
+                                                    <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                                                        <span className="text-xs font-bold text-slate-400 dark:text-slate-550 uppercase block mb-2">Karşılıklı Gol (KG)</span>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            {["KG Var", "KG Yok"].map(betType => {
+                                                                const odd = match.odds.find(o => o.bet_type === betType);
+                                                                if (!odd) return <div key={betType} className="text-xs text-slate-400 text-center py-2 bg-white dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800">-</div>;
+                                                                const isSelected = selectedOdds.some(item => item.odd.id === odd.id);
+                                                                return (
+                                                                    <button
+                                                                        key={odd.id}
+                                                                        onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
+                                                                        disabled={isLiveOrFinished}
+                                                                        className={`px-3 py-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" :
+                                                                            isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
+                                                                                "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                                                            }`}
+                                                                    >
+                                                                        <span className="text-[10px] text-slate-400 dark:text-slate-550 font-normal">{betType}</span>
+                                                                        <span>{odd.odd_value.toFixed(2)}</span>
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                    {/* İlk Yarı Sonucu */}
+                                                    <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                                                        <span className="text-xs font-bold text-slate-400 dark:text-slate-550 uppercase block mb-2">İlk Yarı Sonucu (İY)</span>
+                                                        <div className="grid grid-cols-3 gap-1.5">
+                                                            {["İY 1", "İY 0", "İY 2"].map(betType => {
+                                                                const odd = match.odds.find(o => o.bet_type === betType);
+                                                                if (!odd) return <div key={betType} className="text-xs text-slate-400 text-center py-2 bg-white dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800">-</div>;
+                                                                const isSelected = selectedOdds.some(item => item.odd.id === odd.id);
+                                                                return (
+                                                                    <button
+                                                                        key={odd.id}
+                                                                        onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
+                                                                        disabled={isLiveOrFinished}
+                                                                        className={`px-2 py-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" :
+                                                                            isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
+                                                                                "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                                                                            }`}
+                                                                    >
+                                                                        <span className="text-[9px] text-slate-400 dark:text-slate-550 font-normal">{betType}</span>
+                                                                        <span>{odd.odd_value.toFixed(2)}</span>
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                {isExpanded && (
-                                                    <div className="mt-4 pt-4 border-t border-slate-150 dark:border-slate-800 grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in">
-                                                        {/* Alt/Üst 2.5 */}
-                                                        <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                                                            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-2">Alt / Üst (2.5)</span>
-                                                            <div className="grid grid-cols-2 gap-2">
-                                                                {["2.5 Alt", "2.5 Üst"].map(betType => {
-                                                                    const odd = match.odds.find(o => o.bet_type === betType);
-                                                                    if (!odd) return <div key={betType} className="text-xs text-slate-400 text-center py-2 bg-white dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800">-</div>;
-                                                                    const isSelected = selectedOdds.some(item => item.odd.id === odd.id);
-                                                                    return (
-                                                                        <button
-                                                                            key={odd.id}
-                                                                            onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
-                                                                            disabled={isLiveOrFinished}
-                                                                            className={`px-3 py-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" :
-                                                                                isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
-                                                                                    "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
-                                                                                }`}
-                                                                        >
-                                                                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">{betType}</span>
-                                                                            <span>{odd.odd_value.toFixed(2)}</span>
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                        {/* Karşılıklı Gol */}
-                                                        <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                                                            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-2">Karşılıklı Gol (KG)</span>
-                                                            <div className="grid grid-cols-2 gap-2">
-                                                                {["KG Var", "KG Yok"].map(betType => {
-                                                                    const odd = match.odds.find(o => o.bet_type === betType);
-                                                                    if (!odd) return <div key={betType} className="text-xs text-slate-400 text-center py-2 bg-white dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800">-</div>;
-                                                                    const isSelected = selectedOdds.some(item => item.odd.id === odd.id);
-                                                                    return (
-                                                                        <button
-                                                                            key={odd.id}
-                                                                            onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
-                                                                            disabled={isLiveOrFinished}
-                                                                            className={`px-3 py-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" :
-                                                                                isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
-                                                                                    "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
-                                                                                }`}
-                                                                        >
-                                                                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">{betType}</span>
-                                                                            <span>{odd.odd_value.toFixed(2)}</span>
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                        {/* İlk Yarı Sonucu */}
-                                                        <div className="bg-slate-50 dark:bg-slate-800/30 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
-                                                            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase block mb-2">İlk Yarı Sonucu (İY)</span>
-                                                            <div className="grid grid-cols-3 gap-1.5">
-                                                                {["İY 1", "İY 0", "İY 2"].map(betType => {
-                                                                    const odd = match.odds.find(o => o.bet_type === betType);
-                                                                    if (!odd) return <div key={betType} className="text-xs text-slate-400 text-center py-2 bg-white dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800">-</div>;
-                                                                    const isSelected = selectedOdds.some(item => item.odd.id === odd.id);
-                                                                    return (
-                                                                        <button
-                                                                            key={odd.id}
-                                                                            onClick={() => { if (!isLiveOrFinished) handleSelectOdd(match, odd); }}
-                                                                            disabled={isLiveOrFinished}
-                                                                            className={`px-2 py-1.5 rounded-lg flex flex-col items-center justify-center gap-0.5 text-xs font-bold transition-all border cursor-pointer ${isSelected ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" :
-                                                                                isLiveOrFinished ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed" :
-                                                                                    "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-500 hover:text-indigo-600 dark:hover:text-indigo-400"
-                                                                                }`}
-                                                                        >
-                                                                            <span className="text-[9px] text-slate-400 dark:text-slate-500 font-normal">{betType}</span>
-                                                                            <span>{odd.odd_value.toFixed(2)}</span>
-                                                                        </button>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        ))}
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                        </div>
                     </div>
                 )}
             </div>
