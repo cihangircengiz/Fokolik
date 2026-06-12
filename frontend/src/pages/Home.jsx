@@ -4,11 +4,15 @@ import { apiService, API_BASE_URL } from '../services/api';
 import { Calendar, HelpCircle, Plus, Receipt, Trash2, Coins, ChevronDown, ChevronUp, Globe, Clock, XCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import ConfirmModal from '../components/ConfirmModal';
+import { useMatchStore } from '../store/useMatchStore';
 
 export default function Home() {
     const { user, token, refreshUserBalance } = useContext(AuthContext);
 
-    const [matches, setMatches] = useState([]);
+    const matches = useMatchStore((state) => state.matches);
+    const setMatches = useMatchStore((state) => state.setMatches);
+    const updateMatches = useMatchStore((state) => state.updateMatches);
+    
     const [slips, setSlips] = useState([]); // Only for active slips footer
     const [selectedOdds, setSelectedOdds] = useState([]);
     const [betAmount, setBetAmount] = useState("10");
@@ -51,42 +55,33 @@ export default function Home() {
     useEffect(() => {
         const ws = apiService.connectWebSocket(async (msg) => {
             if (msg.type === "match_updates") {
-                setMatches((prevMatches) => {
-                    return prevMatches.map((m) => {
-                        const update = msg.data.find((item) => item.id === m.id);
-                        if (update) {
-                            const homeScoreChanged = update.home_score !== m.home_score;
-                            const awayScoreChanged = update.away_score !== m.away_score;
-                            if (homeScoreChanged || awayScoreChanged) {
-                                setFlashMatches((prev) => ({
-                                    ...prev,
-                                    [m.id]: {
-                                        home: homeScoreChanged,
-                                        away: awayScoreChanged,
-                                    },
-                                }));
-                                // Clear flash animation after 3s
-                                setTimeout(() => {
-                                    setFlashMatches((prev) => {
-                                        const copy = { ...prev };
-                                        delete copy[m.id];
-                                        return copy;
-                                    });
-                                }, 3000);
-                            }
-                            return {
-                                ...m,
-                                status: update.status,
-                                home_score: update.home_score,
-                                away_score: update.away_score,
-                                minute: update.minute,
-                                ht_home_score: update.ht_home_score,
-                                ht_away_score: update.ht_away_score,
-                            };
+                const currentMatches = useMatchStore.getState().matches;
+                
+                msg.data.forEach((update) => {
+                    const m = currentMatches.find((item) => item.id === update.id);
+                    if (m) {
+                        const homeScoreChanged = update.home_score !== m.home_score;
+                        const awayScoreChanged = update.away_score !== m.away_score;
+                        if (homeScoreChanged || awayScoreChanged) {
+                            setFlashMatches((prev) => ({
+                                ...prev,
+                                [m.id]: {
+                                    home: homeScoreChanged,
+                                    away: awayScoreChanged,
+                                },
+                            }));
+                            setTimeout(() => {
+                                setFlashMatches((prev) => {
+                                    const copy = { ...prev };
+                                    delete copy[m.id];
+                                    return copy;
+                                });
+                            }, 3000);
                         }
-                        return m;
-                    });
+                    }
                 });
+                
+                updateMatches(msg.data);
             } else if (msg.type === "slip_settled") {
                 if (user && msg.data.user_id === user.id) {
                     if (msg.data.status === "won") {

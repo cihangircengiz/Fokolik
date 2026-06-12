@@ -12,6 +12,8 @@ import logging
 import json
 import asyncio
 from datetime import datetime, timedelta, timezone
+from sqlalchemy.orm import Session
+from app.models import Match, Odd
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("fetcher")
@@ -235,4 +237,42 @@ class NesineFetcher:
 
         return odds_list
 
+def process_nesine_odds(db: Session):
+    fetcher = NesineFetcher()
+    try:
+        nesine_matches = fetcher.fetch_bulletin()
+    except Exception as e:
+        logger.error(f"Failed to fetch nesine bulletin: {e}")
+        return
 
+    for mdata in nesine_matches:
+        match_id = str(mdata["id"])
+        
+        # Check if match exists in DB (created by Mackolik)
+        db_match = db.query(Match).filter(Match.id == match_id).first()
+        if not db_match:
+            continue
+            
+        # Update or create odds
+        for odd_data in mdata["odds"]:
+            bet_type = odd_data["bet_type"]
+            odd_value = odd_data["odd_value"]
+            
+            db_odd = db.query(Odd).filter(
+                Odd.match_id == match_id,
+                Odd.bet_type == bet_type
+            ).first()
+            
+            if db_odd:
+                if db_odd.odd_value != odd_value:
+                    db_odd.odd_value = odd_value
+            else:
+                db_odd = Odd(
+                    match_id=match_id,
+                    bet_type=bet_type,
+                    odd_value=odd_value
+                )
+                db.add(db_odd)
+                
+    db.commit()
+    logger.info("Successfully updated Nesine odds for Mackolik matches.")

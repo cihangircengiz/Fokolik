@@ -3,12 +3,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routers import auth, matches, slips, battles, users
 from .ws_manager import manager
 from .telemetry import get_system_status
+from .scheduler import start_scheduler, stop_scheduler
 
 app = FastAPI(
     title="Football Betting Simulation API",
     description="Backend for football betting simulation game.",
     version="2.0.0"
 )
+
+@app.on_event("startup")
+def startup_event():
+    start_scheduler()
+
+@app.on_event("shutdown")
+def shutdown_event():
+    stop_scheduler()
+
 
 # Configure CORS so our React frontend can connect
 app.add_middleware(
