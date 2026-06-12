@@ -308,7 +308,8 @@ export default function Home() {
 
     // We pass showLeague as a prop to optionally hide it in grouped views
     const renderMatch = (match, showLeague = false) => {
-        const isLiveOrFinished = match.status !== "not_started";
+        const isPastStartTime = new Date(match.start_date) <= new Date();
+        const isLiveOrFinished = match.status !== "not_started" || isPastStartTime;
         
         // Find Odds
         const getOdd = (type) => match.odds?.find(o => o.bet_type === type);
@@ -349,15 +350,21 @@ export default function Home() {
                     
                     {/* Saat ve Durum */}
                     <div className="flex items-center gap-2 w-[70px] shrink-0 border-r border-slate-200 dark:border-[#2a453d] pr-2">
-                        {isLiveOrFinished && match.status !== "finished" ? (
+                        {match.status !== "not_started" && match.status !== "finished" ? (
                             <>
                                 <span className="text-red-500 dark:text-red-400 font-bold text-xs animate-pulse">
-                                    {match.minute ? `${match.minute}'` : 'CANLI'}
+                                    {match.minute ? (['İY', 'MS', 'Devre'].some(k => match.minute.includes(k)) ? match.minute : `${match.minute}'`) : 'CANLI'}
                                 </span>
                             </>
                         ) : match.status === "finished" ? (
                             <>
                                 <span className="text-slate-500 font-bold text-xs">MS</span>
+                            </>
+                        ) : isPastStartTime ? (
+                            <>
+                                <span className="text-orange-500 dark:text-orange-400 font-bold text-[11px] uppercase tracking-tighter leading-tight" title="Maçkolik'ten veri bekleniyor">
+                                    Başladı
+                                </span>
                             </>
                         ) : (
                             <>

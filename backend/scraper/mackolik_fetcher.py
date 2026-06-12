@@ -27,14 +27,38 @@ def map_mackolik_status(state: str, substate: str) -> str:
         return "live"
     return "not_started"
 
-def get_minute_display(state: str, substate: str, status_box: str | None) -> str:
+def get_minute_display(state: str, substate: str, status_box: str | None, mdata: dict | None = None) -> str:
     if state == "post":
         return "MS"
     if state == "live":
         if substate == "halfTime":
             return "İY"
         if status_box:
-            return status_box
+            return str(status_box)
+            
+        if mdata and mdata.get("status") == "minutes":
+            period_start = mdata.get("periodStart")
+            period_id = mdata.get("periodId", 1)
+            
+            if period_start:
+                now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+                elapsed_ms = now_ms - period_start
+                elapsed_mins = max(0, int(elapsed_ms / 60000))
+                
+                if period_id == 1:
+                    minute = elapsed_mins
+                    if minute > 45: return "45+"
+                elif period_id == 2:
+                    minute = 45 + elapsed_mins
+                    if minute > 90: return "90+"
+                elif period_id == 3:
+                    minute = 90 + elapsed_mins
+                elif period_id == 4:
+                    minute = 105 + elapsed_mins
+                else:
+                    minute = elapsed_mins
+                    
+                return str(minute)
         return ""
     return ""
 
@@ -114,8 +138,16 @@ def process_mackolik_matches(db: Session, days_forward: int = 3):
             substate = mdata.get("substate", "none")
             status_box = mdata.get("statusBoxContent")
 
+            # DB Operations
+            db_match = db.query(Match).filter(Match.id == iddaa_code_str).first()
+
             new_status = map_mackolik_status(state, substate)
-            minute_display = get_minute_display(state, substate, status_box)
+            
+            # Prevent reverting canceled matches back to not_started if they are stale on Mackolik
+            if db_match and db_match.status == "canceled" and new_status == "not_started":
+                new_status = "canceled"
+                
+            minute_display = get_minute_display(state, substate, status_box, mdata)
 
             score = mdata.get("score", {})
             try:
@@ -132,9 +164,6 @@ def process_mackolik_matches(db: Session, days_forward: int = 3):
             except (ValueError, TypeError):
                 ht_home = 0
                 ht_away = 0
-
-            # DB Operations
-            db_match = db.query(Match).filter(Match.id == iddaa_code_str).first()
             
             if not db_match:
                 db_match = Match(

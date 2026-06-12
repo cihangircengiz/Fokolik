@@ -243,7 +243,12 @@ export default function Profile() {
                             </div>
                             <div className="flex items-center gap-3">
                               <span className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded transition-colors duration-200">{d?.bet_type}</span>
-                              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">@{d?.odd_value.toFixed(2)}</span>
+                              {sel.status === "void" && (
+                                <span className="text-xs font-bold text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded">İADE</span>
+                              )}
+                              <span className={`font-mono font-bold ${sel.status === 'void' ? 'line-through text-slate-400 dark:text-slate-600' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                @{d?.odd_value.toFixed(2)}
+                              </span>
                             </div>
                           </div>
                         );

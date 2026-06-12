@@ -243,7 +243,9 @@ def process_nesine_odds(db: Session):
         nesine_matches = fetcher.fetch_bulletin()
     except Exception as e:
         logger.error(f"Failed to fetch nesine bulletin: {e}")
-        return
+        return []
+
+    updated_matches_data = []
 
     for mdata in nesine_matches:
         match_id = str(mdata["id"])
@@ -254,6 +256,7 @@ def process_nesine_odds(db: Session):
             continue
             
         # Update or create odds
+        odds_changed = False
         for odd_data in mdata["odds"]:
             bet_type = odd_data["bet_type"]
             odd_value = odd_data["odd_value"]
@@ -266,6 +269,7 @@ def process_nesine_odds(db: Session):
             if db_odd:
                 if db_odd.odd_value != odd_value:
                     db_odd.odd_value = odd_value
+                    odds_changed = True
             else:
                 db_odd = Odd(
                     match_id=match_id,
@@ -273,6 +277,21 @@ def process_nesine_odds(db: Session):
                     odd_value=odd_value
                 )
                 db.add(db_odd)
+                odds_changed = True
+                
+        if odds_changed:
+            db.flush()
+            # Fetch all current odds for this match to broadcast
+            all_odds = db.query(Odd).filter(Odd.match_id == match_id).all()
+            odds_payload = [
+                {"id": o.id, "bet_type": o.bet_type, "odd_value": o.odd_value}
+                for o in all_odds
+            ]
+            updated_matches_data.append({
+                "id": match_id,
+                "odds": odds_payload
+            })
                 
     db.commit()
-    logger.info("Successfully updated Nesine odds for Mackolik matches.")
+    logger.info(f"Successfully updated Nesine odds. {len(updated_matches_data)} matches had odd changes.")
+    return updated_matches_data

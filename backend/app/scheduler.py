@@ -31,6 +31,13 @@ async def job_mackolik_live_updates():
             if settled:
                 for s in settled:
                     await manager.broadcast_slip_settled(s["slip_id"], s["status"], s["user_id"], s["payout"])
+                    
+        # Check and settle stale/voided matches (e.g. 4 hours past start time)
+        from app.settlement import settle_voided_matches
+        voided = settle_voided_matches(db, max_hours_past=4)
+        if voided:
+            for s in voided:
+                await manager.broadcast_slip_settled(s["slip_id"], s["status"], s["user_id"], s["payout"])
         
         update_worker_status("live_worker", "ok")
 
@@ -44,7 +51,11 @@ async def job_nesine_odds():
     """Fetches odds from Nesine and matches them to Mackolik matches in DB."""
     db = SessionLocal()
     try:
-        process_nesine_odds(db)
+        updated_matches = await asyncio.to_thread(process_nesine_odds, db)
+        if updated_matches:
+            logger.info(f"Broadcasting odds updates for {len(updated_matches)} matches.")
+            await manager.broadcast_match_updates(updated_matches)
+            
         update_worker_status("bulletin_worker", "ok")
     except Exception as e:
         update_worker_status("bulletin_worker", "error", str(e))
@@ -65,7 +76,7 @@ def start_scheduler():
     
     scheduler.add_job(
         job_nesine_odds,
-        trigger=IntervalTrigger(hours=1),
+        trigger=IntervalTrigger(minutes=1),
         id="nesine_odds",
         name="Nesine Odds Matcher",
         replace_existing=True,
