@@ -7,7 +7,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String(50), unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     coin_balance = Column(Float, default=10000.0, nullable=False)
 
@@ -16,7 +16,7 @@ class User(Base):
 class Match(Base):
     __tablename__ = "matches"
 
-    id = Column(String, primary_key=True, index=True)
+    id = Column(String(50), primary_key=True, index=True)
     home_team = Column(String, nullable=False)
     away_team = Column(String, nullable=False)
     start_date = Column(DateTime, nullable=False)
@@ -37,7 +37,7 @@ class Odd(Base):
     __tablename__ = "odds"
 
     id = Column(Integer, primary_key=True, index=True)
-    match_id = Column(String, ForeignKey("matches.id", ondelete="CASCADE"), nullable=False)
+    match_id = Column(String(50), ForeignKey("matches.id", ondelete="CASCADE"), nullable=False)
     bet_type = Column(String, nullable=False)  # e.g., "MS 1", "MS 0", "MS 2", "2.5 Üst", "2.5 Alt"
     odd_value = Column(Float, nullable=False)
 
@@ -74,7 +74,7 @@ class Battle(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     creator_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    invite_code = Column(String, unique=True, index=True, nullable=False)
+    invite_code = Column(String(50), unique=True, index=True, nullable=False)
     status = Column(String, default="active", nullable=False)  # active, completed
     is_public = Column(Boolean, default=True, nullable=False)
     max_participants = Column(Integer, nullable=True)
@@ -89,7 +89,7 @@ class BattleMatch(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     battle_id = Column(Integer, ForeignKey("battles.id", ondelete="CASCADE"), nullable=False)
-    match_id = Column(String, ForeignKey("matches.id", ondelete="CASCADE"), nullable=False)
+    match_id = Column(String(50), ForeignKey("matches.id", ondelete="CASCADE"), nullable=False)
 
     battle = relationship("Battle", back_populates="matches")
     match = relationship("Match")
@@ -99,8 +99,8 @@ class BattleParticipant(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     battle_id = Column(Integer, ForeignKey("battles.id", ondelete="CASCADE"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    slip_id = Column(Integer, ForeignKey("slips.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    slip_id = Column(Integer, ForeignKey("slips.id"), nullable=False)
     earned_points = Column(Integer, default=0, nullable=False)
 
     battle = relationship("Battle", back_populates="participants")
