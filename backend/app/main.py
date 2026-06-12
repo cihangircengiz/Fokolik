@@ -32,7 +32,8 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.5.0.1:3000",
-        "https://fokolik.pages.dev"
+        "https://fokolik.pages.dev",
+        "https://fokolik.cengiz.in"
     ],
     allow_credentials=True,
     allow_methods=["*"],
