@@ -177,6 +177,7 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
                 const isExpanded = expandedMatches[match.id];
                 const toggleExpand = () => setExpandedMatches(prev => ({ ...prev, [match.id]: !prev[match.id] }));
                 const isPastStartTime = new Date(match.start_date) <= new Date();
+                const isLiveOrFinished = match.status !== "not_started" || isPastStartTime;
 
                 return (
                     <div key={match.id} className="group relative flex flex-col p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-200 dark:border-slate-700/50 last:border-0 min-w-0 w-full overflow-hidden">
@@ -184,8 +185,14 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
                             {/* Sol/Orta Alan */}
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                                 {/* Saat ve Durum */}
-                                <div className="flex items-center justify-center gap-2 w-[70px] shrink-0 border-r border-slate-200 dark:border-slate-700 pr-2">
-                                    {isPastStartTime ? (
+                                <div className="flex items-center justify-center gap-2 w-[70px] shrink-0 border-r border-slate-200 dark:border-slate-700 pr-2 cursor-help" title={`Son Güncelleme: ${match.updated_at ? new Date(match.updated_at + "Z").toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : 'Bilinmiyor'}`}>
+                                    {match.status !== "not_started" && match.status !== "finished" ? (
+                                        <span className="text-red-500 dark:text-red-400 font-bold text-xs animate-pulse">
+                                            {match.minute ? (['İY', 'MS', 'Devre'].some(k => match.minute.includes(k)) ? match.minute : `${match.minute}'`) : 'CANLI'}
+                                        </span>
+                                    ) : match.status === "finished" ? (
+                                        <span className="text-slate-500 font-bold text-xs">MS</span>
+                                    ) : isPastStartTime ? (
                                         <span className="text-orange-500 dark:text-orange-400 font-bold text-[11px] uppercase tracking-tighter leading-tight">Başladı</span>
                                     ) : (
                                         <span className="text-slate-600 dark:text-slate-400 font-semibold text-[13px]">
@@ -200,7 +207,15 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
                                         {match.home_team}
                                     </div>
                                     <div className="flex items-center justify-center w-10 sm:w-12 shrink-0 bg-slate-100 dark:bg-slate-800 rounded px-1 sm:px-2 py-0.5 border border-slate-200 dark:border-slate-700">
-                                        <span className="text-slate-400 dark:text-slate-500 font-bold text-xs">-</span>
+                                        {isLiveOrFinished ? (
+                                            <div className="flex items-center gap-1 font-mono font-bold text-[12px] sm:text-[13px] text-slate-800 dark:text-slate-200">
+                                                <span>{match.home_score}</span>
+                                                <span className="text-slate-400">-</span>
+                                                <span>{match.away_score}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-slate-400 dark:text-slate-500 font-bold text-xs">-</span>
+                                        )}
                                     </div>
                                     <div className="flex-1 text-left text-[12px] sm:text-[13px] font-bold truncate text-slate-800 dark:text-slate-200" title={match.away_team}>
                                         {match.away_team}
