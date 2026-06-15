@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     MACKOLIK_JSON_URL: str = "https://www.mackolik.com/perform/p0/ajax/components/competition/livescores/json"
     SCRAPE_INTERVAL_SECONDS: int = 60
     ENABLE_WORKERS: bool = True
+    REDIS_URL: str = "redis://localhost:6379"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
 from typing import List
+from fastapi_cache.decorator import cache
 
 from app import models, schemas, crud
 from app.database import get_db
@@ -50,6 +51,7 @@ def create_battle(battle_in: schemas.BattleCreate, db: Session = Depends(get_db)
     return get_battle_by_code(invite_code, db)
 
 @router.get("/public", response_model=List[schemas.BattleResponse])
+@cache(expire=15)
 def get_public_battles(db: Session = Depends(get_db)):
     now = datetime.datetime.now()
     battles = db.query(models.Battle).filter(
@@ -79,6 +81,7 @@ def get_my_battles(db: Session = Depends(get_db), current_user: models.User = De
     return result
 
 @router.get("/leaderboard", response_model=List[schemas.LeaderboardUser])
+@cache(expire=60)
 def get_leaderboard(db: Session = Depends(get_db)):
     now = datetime.datetime.now()
     start_of_month = datetime.datetime(now.year, now.month, 1)

@@ -11,10 +11,17 @@ app = FastAPI(
     version="2.0.0"
 )
 
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+from redis import asyncio as aioredis
 from .config import settings
 
 @app.on_event("startup")
-def startup_event():
+async def startup_event():
+    # Setup Redis Cache
+    redis = aioredis.from_url(settings.REDIS_URL, encoding="utf8", decode_responses=True)
+    FastAPICache.init(RedisBackend(redis), prefix="fokolik-cache")
+    
     if settings.ENABLE_WORKERS:
         start_scheduler()
 
