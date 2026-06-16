@@ -29,7 +29,6 @@ USER_AGENTS = [
 MARKET_TYPES = {
     1: {
         # MTID 1 = Maç Sonucu (Match Result) — 3-way: 1, X, 2
-        # OCA outcomes: N=1 → Home, N=2 → Draw, N=3 → Away
         "name": "Maç Sonucu",
         "outcomes": {
             1: "MS 1",   # Home win
@@ -39,7 +38,6 @@ MARKET_TYPES = {
     },
     3: {
         # MTID 3 = İlk Yarı Sonucu (First Half Result) — 3-way
-        # OCA outcomes: N=1 → Home, N=2 → Draw, N=3 → Away
         "name": "İlk Yarı Sonucu",
         "outcomes": {
             1: "İY 1",   # Home leads at half-time
@@ -47,18 +45,76 @@ MARKET_TYPES = {
             3: "İY 2",   # Away leads at half-time
         }
     },
+    8: {
+        # MTID 8 = Çifte Şans (Double Chance)
+        "name": "Çifte Şans",
+        "outcomes": {
+            1: "ÇŞ 1-X",
+            2: "ÇŞ 1-2",
+            3: "ÇŞ X-2",
+        }
+    },
     12: {
         # MTID 12 = Alt/Üst (Over/Under 2.5) — typically SOV=2.5
-        # OCA outcomes: N=1 → Alt (Under), N=2 → Üst (Over)
         "name": "Alt/Üst",
         "outcomes": {
             1: "2.5 Alt",
             2: "2.5 Üst",
         }
     },
+    13: {
+        # MTID 13 = Alt/Üst 3.5
+        "name": "Alt/Üst 3.5",
+        "outcomes": {
+            1: "3.5 Alt",
+            2: "3.5 Üst",
+        }
+    },
+    14: {
+        # MTID 14 = Alt/Üst 1.5
+        "name": "Alt/Üst 1.5",
+        "outcomes": {
+            1: "1.5 Alt",
+            2: "1.5 Üst",
+        }
+    },
+    43: {
+        # MTID 43 = Toplam Gol Aralığı
+        "name": "Toplam Gol Aralığı",
+        "outcomes": {
+            1: "TG 0-1",
+            2: "TG 2-3",
+            3: "TG 4-5",
+            4: "TG 6+",
+        }
+    },
+    48: {
+        # MTID 48 = İlk Yarı Çifte Şans
+        "name": "İlk Yarı Çifte Şans",
+        "outcomes": {
+            1: "İY ÇŞ 1-X",
+            2: "İY ÇŞ 1-2",
+            3: "İY ÇŞ X-2",
+        }
+    },
+    49: {
+        # MTID 49 = İlk Yarı 1.5 Alt/Üst
+        "name": "İlk Yarı 1.5 Alt/Üst",
+        "outcomes": {
+            1: "İY 1.5 Alt",
+            2: "İY 1.5 Üst",
+        }
+    },
+    295: {
+        # MTID 295 = Ev Sahibi Gol Alt/Üst 0.5
+        "name": "Ev Sahibi Gol Alt/Üst 0.5",
+        "outcomes": {
+            1: "Ev 0.5 Alt",
+            2: "Ev 0.5 Üst",
+        }
+    },
     450: {
         # MTID 450 = Karşılıklı Gol (Both Teams To Score)
-        # OCA outcomes: N=1 → Var (Yes), N=2 → Yok (No)
         "name": "Karşılıklı Gol",
         "outcomes": {
             1: "KG Var",
@@ -210,11 +266,17 @@ class NesineFetcher:
             if mtid not in MARKET_TYPES:
                 continue
 
-            # For Alt/Üst, only take the 2.5 line
-            if mtid == 12:
-                sov = market.get("SOV", 0)
-                if sov != 2.5:
-                    continue
+            # Verify the SOV line matches the expected type
+            if mtid == 12 and market.get("SOV", 0) != 2.5:
+                continue
+            if mtid == 13 and market.get("SOV", 0) != 3.5:
+                continue
+            if mtid == 14 and market.get("SOV", 0) != 1.5:
+                continue
+            if mtid == 49 and market.get("SOV", 0) != 1.5:
+                continue
+            if mtid == 295 and market.get("SOV", 0) != 0.5:
+                continue
 
             config = MARKET_TYPES[mtid]
             outcomes = market.get("OCA", [])

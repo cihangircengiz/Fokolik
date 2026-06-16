@@ -153,6 +153,24 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
                 const ust25 = getOdd("2.5 Üst");
                 const kgVar = getOdd("KG Var");
                 const kgYok = getOdd("KG Yok");
+                const cs1x = getOdd("ÇŞ 1-X");
+                const cs12 = getOdd("ÇŞ 1-2");
+                const csx2 = getOdd("ÇŞ X-2");
+                const alt15 = getOdd("1.5 Alt");
+                const ust15 = getOdd("1.5 Üst");
+                const alt35 = getOdd("3.5 Alt");
+                const ust35 = getOdd("3.5 Üst");
+                const iyAlt15 = getOdd("İY 1.5 Alt");
+                const iyUst15 = getOdd("İY 1.5 Üst");
+                const iyCs1x = getOdd("İY ÇŞ 1-X");
+                const iyCs12 = getOdd("İY ÇŞ 1-2");
+                const iyCsx2 = getOdd("İY ÇŞ X-2");
+                const ev05Alt = getOdd("Ev 0.5 Alt");
+                const ev05Ust = getOdd("Ev 0.5 Üst");
+                const tg01 = getOdd("TG 0-1");
+                const tg23 = getOdd("TG 2-3");
+                const tg45 = getOdd("TG 4-5");
+                const tg6plus = getOdd("TG 6+");
 
                 const isSelected = (oddId) => {
                   return selections[match.id]?.id === oddId;
@@ -250,6 +268,17 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
                         {/* Genişletilmiş Oranlar Container */}
                         {isExpanded && (
                             <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700/50 flex flex-wrap gap-x-6 gap-y-4 animate-in slide-in-from-top-2">
+                                {/* Çifte Şans */}
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] font-bold text-slate-505 dark:text-slate-400 uppercase tracking-wider">Çifte Şans</span>
+                                    <div className="flex items-center">
+                                        {renderOddBtn(cs1x, "1-X")}
+                                        {renderOddBtn(cs12, "1-2")}
+                                        {renderOddBtn(csx2, "X-2")}
+                                    </div>
+                                </div>
+
+                                {/* İY Oranları */}
                                 <div className="flex flex-col gap-1.5">
                                     <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">İlk Yarı Sonucu</span>
                                     <div className="flex items-center">
@@ -258,18 +287,65 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
                                         {renderOddBtn(iy2, "İY 2")}
                                     </div>
                                 </div>
+
+                                {/* İY Çifte Şans */}
                                 <div className="flex flex-col gap-1.5">
-                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Alt / Üst (2.5)</span>
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">İY Çifte Şans</span>
                                     <div className="flex items-center">
-                                        {renderOddBtn(alt25, "Alt")}
-                                        {renderOddBtn(ust25, "Üst")}
+                                        {renderOddBtn(iyCs1x, "1-X")}
+                                        {renderOddBtn(iyCs12, "1-2")}
+                                        {renderOddBtn(iyCsx2, "X-2")}
                                     </div>
                                 </div>
+
+                                {/* Alt/Üst Oranları */}
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Alt / Üst</span>
+                                    <div className="flex items-center">
+                                        {renderOddBtn(alt15, "1.5 A")}
+                                        {renderOddBtn(ust15, "1.5 Ü")}
+                                        {renderOddBtn(alt25, "2.5 A")}
+                                        {renderOddBtn(ust25, "2.5 Ü")}
+                                        {renderOddBtn(alt35, "3.5 A")}
+                                        {renderOddBtn(ust35, "3.5 Ü")}
+                                    </div>
+                                </div>
+
+                                {/* İY Alt/Üst */}
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">İY Alt / Üst</span>
+                                    <div className="flex items-center">
+                                        {renderOddBtn(iyAlt15, "1.5 A")}
+                                        {renderOddBtn(iyUst15, "1.5 Ü")}
+                                    </div>
+                                </div>
+
+                                {/* Ev Sahibi Gol */}
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Ev Gol (0.5)</span>
+                                    <div className="flex items-center">
+                                        {renderOddBtn(ev05Alt, "Alt")}
+                                        {renderOddBtn(ev05Ust, "Üst")}
+                                    </div>
+                                </div>
+
+                                {/* KG Oranları */}
                                 <div className="flex flex-col gap-1.5">
                                     <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Karşılıklı Gol</span>
                                     <div className="flex items-center">
                                         {renderOddBtn(kgVar, "Var")}
                                         {renderOddBtn(kgYok, "Yok")}
+                                    </div>
+                                </div>
+
+                                {/* Toplam Gol Aralığı */}
+                                <div className="flex flex-col gap-1.5">
+                                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Toplam Gol Aralığı</span>
+                                    <div className="flex items-center">
+                                        {renderOddBtn(tg01, "0-1")}
+                                        {renderOddBtn(tg23, "2-3")}
+                                        {renderOddBtn(tg45, "4-5")}
+                                        {renderOddBtn(tg6plus, "6+")}
                                     </div>
                                 </div>
                             </div>
