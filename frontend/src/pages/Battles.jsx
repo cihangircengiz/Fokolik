@@ -73,18 +73,18 @@ export default function Battles() {
         {/* Sol Taraf: Lobi ve Benim Düellolarım */}
         <div className="lg:col-span-2 space-y-8">
           {/* Benim Düellolarım */}
-          {myBattles.length > 0 && (
+          {myBattles.filter(b => b.status !== 'completed').length > 0 && (
             <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-6 backdrop-blur-md transition-colors duration-200">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <span className="text-indigo-500">⚔️</span> Benim Düellolarım
               </h2>
               <div className="grid gap-4">
-                {myBattles.map(b => (
+                {myBattles.filter(b => b.status !== 'completed').map(b => (
                   <Link key={b.id} to={`/battles/${b.invite_code}`} className="block bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-4 transition-all hover:scale-[1.01]">
                     <div className="flex justify-between items-center">
                       <div>
                         <div className="text-slate-900 dark:text-white font-bold mb-1">Düello: {b.invite_code}</div>
-                        <div className="text-sm text-slate-500 dark:text-slate-400">{b.matches.length} Maç • <span className={`font-semibold ${b.status === 'started' ? 'text-amber-500' : b.status === 'completed' ? 'text-rose-500' : 'text-emerald-500'}`}>{b.status === 'active' ? 'Açık (Katılım Bekleniyor)' : b.status === 'started' ? 'Başladı (Oynanıyor)' : 'Sonuçlandı'}</span></div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400">{b.matches.length} Maç • <span className={`font-semibold ${b.status === 'started' ? 'text-amber-500' : 'text-emerald-500'}`}>{b.status === 'active' ? 'Açık (Katılım Bekleniyor)' : 'Başladı (Oynanıyor)'}</span></div>
                       </div>
                       <div className="text-indigo-600 dark:text-indigo-400 font-bold">
                         Görüntüle ➔
@@ -101,13 +101,13 @@ export default function Battles() {
             <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
               <span className="text-indigo-500">🌍</span> Herkese Açık Lobi
             </h2>
-            {publicBattles.length === 0 ? (
+            {publicBattles.filter(b => b.status !== 'completed').length === 0 ? (
               <div className="text-center py-8 text-slate-500 dark:text-slate-400">
                 Şu an açık bir düello yok. Ana sayfadan maç seçerek sen başlat!
               </div>
             ) : (
               <div className="grid gap-4">
-                {publicBattles.map(b => (
+                {publicBattles.filter(b => b.status !== 'completed').map(b => (
                   <Link key={b.id} to={`/battles/${b.invite_code}`} className="block bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-4 transition-all hover:scale-[1.01]">
                     <div className="flex justify-between items-center">
                       <div>

@@ -120,7 +120,10 @@ def get_my_battles(db: Session = Depends(get_db), current_user: models.User = De
     
     result = []
     for bid in b_ids:
-        b = db.query(models.Battle).filter(models.Battle.id == bid).first()
+        b = db.query(models.Battle).filter(
+            models.Battle.id == bid,
+            models.Battle.status != "completed"
+        ).first()
         if b:
             result.append(get_battle_by_code(b.invite_code, db))
     return result
@@ -205,18 +208,10 @@ def join_battle(invite_code: str, slip_in: schemas.SlipCreate, db: Session = Dep
     if battle.status != "active":
         raise HTTPException(status_code=400, detail="Bu düello çoktan sonuçlanmış.")
         
-    # Mükerrer katılım kontrolü
-    is_in = db.query(models.BattleParticipant).filter(
-        models.BattleParticipant.battle_id == battle.id,
-        models.BattleParticipant.user_id == current_user.id
-    ).first()
-    if is_in:
-        raise HTTPException(status_code=400, detail="Bu düelloya zaten katıldınız.")
-        
     if battle.max_participants:
-        unique_users = db.query(models.BattleParticipant.user_id).filter(models.BattleParticipant.battle_id == battle.id).distinct().count()
-        if unique_users >= battle.max_participants:
-            raise HTTPException(status_code=400, detail="Kişi limiti dolmuş.")
+        total_participants = db.query(models.BattleParticipant).filter(models.BattleParticipant.battle_id == battle.id).count()
+        if total_participants >= battle.max_participants:
+            raise HTTPException(status_code=400, detail="Katılım limiti dolmuş.")
             
     earliest = get_battle_earliest_start(db, battle.id)
     if earliest and earliest <= datetime.datetime.now():

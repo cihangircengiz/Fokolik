@@ -107,15 +107,7 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
   // Bu düellonun oynanabilir durumda olup olmadığı kontrolü
   let canJoin = battle.status === 'active';
 
-  const myParticipant = battle?.participants?.find(p => p.user_id === user?.id);
-  const mySelections = {};
-  if (myParticipant && myParticipant.slip && myParticipant.slip.selections) {
-    myParticipant.slip.selections.forEach(sel => {
-      if (sel.odd_details) {
-        mySelections[sel.odd_details.match_id] = sel.odd_details;
-      }
-    });
-  }
+  const myParticipants = battle?.participants?.filter(p => p.user_id === user?.id) || [];
   
   return (
     <div className="space-y-8 animate-fade-in pb-12 px-4">
@@ -163,16 +155,13 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
                 const kgYok = getOdd("KG Yok");
 
                 const isSelected = (oddId) => {
-                  if (myParticipant) {
-                      return mySelections[match.id]?.id === oddId;
-                  }
                   return selections[match.id]?.id === oddId;
                 };
                 
                 const renderOddBtn = (oddObj, label) => {
                     if (!oddObj) return <div className="w-[50px] text-center text-[11px] text-slate-500 bg-slate-50 dark:bg-[#1a2c27] rounded py-1.5 mx-[1px] border border-transparent">-</div>;
                     const selected = isSelected(oddObj.id);
-                    const isDisabled = !canJoin || !!myParticipant;
+                    const isDisabled = !canJoin;
                     return (
                         <button
                             disabled={isDisabled}
@@ -292,30 +281,36 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
 
           {/* Bahis Yap Kutusu / Zaten Katıldı Uyarısı */}
           {canJoin && (
-            myParticipant ? (
-              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/10 dark:to-teal-900/10 border border-emerald-250 dark:border-emerald-900/30 rounded-2xl p-6 backdrop-blur-md transition-colors duration-200 flex flex-col gap-3">
-                <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-450 flex items-center gap-2">
-                  <span>✅</span> Bu Düelloya Katıldınız
-                </h3>
-                <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                  Tebrikler! Bu düelloya katılımınız başarıyla tamamlandı. Seçtiğiniz tahminler yukarıdaki maç listesinde mavi/indigo olarak vurgulanmıştır.
-                </p>
-                <div className="mt-2 p-4 bg-white dark:bg-slate-900/60 border border-emerald-100 dark:border-emerald-900/40 rounded-xl flex flex-wrap gap-6 items-center justify-between text-sm">
-                  <div>
-                    <span className="text-slate-505 dark:text-slate-400">Yatırılan Tutar:</span>{" "}
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{myParticipant.slip?.amount} Coin</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-505 dark:text-slate-400">Toplam Oran:</span>{" "}
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">@{myParticipant.slip?.total_odd?.toFixed(2)}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-505 dark:text-slate-400">Olası Kazanç:</span>{" "}
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">{(myParticipant.slip?.amount * myParticipant.slip?.total_odd).toFixed(2)} Coin</span>
+            <div className="space-y-6">
+              {myParticipants.length > 0 && (
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/10 dark:to-teal-900/10 border border-emerald-250 dark:border-emerald-900/30 rounded-2xl p-6 backdrop-blur-md transition-colors duration-200 flex flex-col gap-3">
+                  <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-450 flex items-center gap-2">
+                    <span>✅</span> Bu Düelloda {myParticipants.length} Katılımınız Var
+                  </h3>
+                  <div className="space-y-3">
+                    {myParticipants.map((p, idx) => (
+                      <div key={p.id} className="p-4 bg-white dark:bg-slate-900/60 border border-emerald-100 dark:border-emerald-900/40 rounded-xl flex flex-wrap gap-6 items-center justify-between text-sm">
+                        <div>
+                          <span className="font-bold text-slate-700 dark:text-slate-300">#{idx + 1} Katılım:</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-550 dark:text-slate-400">Yatırılan Tutar:</span>{" "}
+                          <span className="font-bold text-slate-800 dark:text-slate-200">{p.slip?.amount} Coin</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-550 dark:text-slate-400">Toplam Oran:</span>{" "}
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">@{p.slip?.total_odd?.toFixed(2)}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-550 dark:text-slate-400">Olası Kazanç:</span>{" "}
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">{(p.slip?.amount * p.slip?.total_odd).toFixed(2)} Coin</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-            ) : (
+              )}
+
               <div className="bg-gradient-to-r from-indigo-50 to-slate-50 dark:from-indigo-950/20 dark:to-slate-900/20 border border-indigo-200 dark:border-indigo-900/30 rounded-2xl p-6 backdrop-blur-md transition-colors duration-200">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Düelloya Katıl (Yeni Kupon)</h3>
                 
@@ -347,7 +342,7 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
                 {joinError && <div className="mt-4 text-rose-600 dark:text-red-400 text-sm bg-rose-50 dark:bg-red-900/20 p-3 rounded-lg border border-rose-200 dark:border-red-500/30">{joinError}</div>}
                 {joinSuccess && <div className="mt-4 text-emerald-600 dark:text-green-400 text-sm bg-emerald-50 dark:bg-green-900/20 p-3 rounded-lg border border-emerald-200 dark:border-green-500/30">Başarıyla katıldınız! Şeffaflık panosundan diğerleriyle birlikte kuponunuzu görebilirsiniz. Başka bir kupon daha yapabilirsiniz.</div>}
               </div>
-            )
+            </div>
           )}
         </div>
 
