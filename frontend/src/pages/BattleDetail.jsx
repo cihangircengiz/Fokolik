@@ -5,7 +5,7 @@ import { API_BASE_URL } from "../services/api";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 export default function BattleDetail({ userBalance, setUserBalance }) {
-  const { token, refreshUserBalance } = useContext(AuthContext);
+  const { user, token, refreshUserBalance } = useContext(AuthContext);
   const { inviteCode } = useParams();
   const [battle, setBattle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -106,6 +106,16 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
 
   // Bu düellonun oynanabilir durumda olup olmadığı kontrolü
   let canJoin = battle.status === 'active';
+
+  const myParticipant = battle?.participants?.find(p => p.user_id === user?.id);
+  const mySelections = {};
+  if (myParticipant && myParticipant.slip && myParticipant.slip.selections) {
+    myParticipant.slip.selections.forEach(sel => {
+      if (sel.odd_details) {
+        mySelections[sel.odd_details.match_id] = sel.odd_details;
+      }
+    });
+  }
   
   return (
     <div className="space-y-8 animate-fade-in pb-12 px-4">
@@ -152,21 +162,27 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
                 const kgVar = getOdd("KG Var");
                 const kgYok = getOdd("KG Yok");
 
-                const isSelected = (oddId) => selections[match.id]?.id === oddId;
+                const isSelected = (oddId) => {
+                  if (myParticipant) {
+                      return mySelections[match.id]?.id === oddId;
+                  }
+                  return selections[match.id]?.id === oddId;
+                };
                 
                 const renderOddBtn = (oddObj, label) => {
                     if (!oddObj) return <div className="w-[50px] text-center text-[11px] text-slate-500 bg-slate-50 dark:bg-[#1a2c27] rounded py-1.5 mx-[1px] border border-transparent">-</div>;
                     const selected = isSelected(oddObj.id);
+                    const isDisabled = !canJoin || !!myParticipant;
                     return (
                         <button
-                            disabled={!canJoin}
+                            disabled={isDisabled}
                             onClick={() => handleOddClick(match.id, oddObj)}
-                            className={`w-[50px] px-1 py-1 rounded flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold transition-all border cursor-pointer mx-[1px] ${selected
+                            className={`w-[50px] px-1 py-1 rounded flex flex-col items-center justify-center gap-0.5 text-[11px] font-bold transition-all border mx-[1px] ${selected
                                 ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                                : !canJoin
+                                : isDisabled
                                     ? "bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 cursor-not-allowed"
-                                    : "bg-white dark:bg-[#1a2c27] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#2a453d] hover:border-emerald-500 hover:text-emerald-500"
-                                }`}
+                                    : "bg-white dark:bg-[#1a2c27] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#2a453d] hover:border-emerald-500 hover:text-emerald-500 cursor-pointer"
+                                } ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
                         >
                             <span className="text-[9px] opacity-75 font-normal leading-none">{label}</span>
                             <span className="leading-none">{oddObj.odd_value.toFixed(2)}</span>
@@ -274,39 +290,64 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
             })}
           </div>
 
-          {/* Bahis Yap Kutusu */}
+          {/* Bahis Yap Kutusu / Zaten Katıldı Uyarısı */}
           {canJoin && (
-            <div className="bg-gradient-to-r from-indigo-50 to-slate-50 dark:from-indigo-950/20 dark:to-slate-900/20 border border-indigo-200 dark:border-indigo-900/30 rounded-2xl p-6 backdrop-blur-md transition-colors duration-200">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Düelloya Katıl (Yeni Kupon)</h3>
-              
-              <div className="flex flex-wrap items-end gap-4">
-                <div className="flex-1 min-w-[200px]">
-                  <label className="block text-sm text-slate-550 dark:text-slate-400 mb-2">Yatırılacak Tutar (Coin)</label>
-                  <input 
-                    type="number"
-                    value={betAmount}
-                    onChange={(e) => setBetAmount(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-900/60 border border-slate-250 dark:border-slate-600 text-slate-900 dark:text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors"
-                    placeholder="Örn: 100"
-                  />
+            myParticipant ? (
+              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/10 dark:to-teal-900/10 border border-emerald-250 dark:border-emerald-900/30 rounded-2xl p-6 backdrop-blur-md transition-colors duration-200 flex flex-col gap-3">
+                <h3 className="text-lg font-bold text-emerald-800 dark:text-emerald-450 flex items-center gap-2">
+                  <span>✅</span> Bu Düelloya Katıldınız
+                </h3>
+                <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                  Tebrikler! Bu düelloya katılımınız başarıyla tamamlandı. Seçtiğiniz tahminler yukarıdaki maç listesinde mavi/indigo olarak vurgulanmıştır.
+                </p>
+                <div className="mt-2 p-4 bg-white dark:bg-slate-900/60 border border-emerald-100 dark:border-emerald-900/40 rounded-xl flex flex-wrap gap-6 items-center justify-between text-sm">
+                  <div>
+                    <span className="text-slate-505 dark:text-slate-400">Yatırılan Tutar:</span>{" "}
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{myParticipant.slip?.amount} Coin</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-505 dark:text-slate-400">Toplam Oran:</span>{" "}
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">@{myParticipant.slip?.total_odd?.toFixed(2)}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-505 dark:text-slate-400">Olası Kazanç:</span>{" "}
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">{(myParticipant.slip?.amount * myParticipant.slip?.total_odd).toFixed(2)} Coin</span>
+                  </div>
                 </div>
-                
-                <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl px-6 py-3 min-w-[150px] transition-colors duration-200">
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Toplam Oran</div>
-                  <div className="text-2xl font-bold text-yellow-650 dark:text-yellow-400">{currentTotalOdd.toFixed(2)}</div>
-                </div>
-                
-                <button 
-                  onClick={handleJoin}
-                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-8 rounded-xl transition-colors shadow-lg shadow-indigo-500/20 cursor-pointer"
-                >
-                  Savaşa Katıl
-                </button>
               </div>
-              
-              {joinError && <div className="mt-4 text-rose-600 dark:text-red-400 text-sm bg-rose-50 dark:bg-red-900/20 p-3 rounded-lg border border-rose-200 dark:border-red-500/30">{joinError}</div>}
-              {joinSuccess && <div className="mt-4 text-emerald-600 dark:text-green-400 text-sm bg-emerald-50 dark:bg-green-900/20 p-3 rounded-lg border border-emerald-200 dark:border-green-500/30">Başarıyla katıldınız! Şeffaflık panosundan diğerleriyle birlikte kuponunuzu görebilirsiniz. Başka bir kupon daha yapabilirsiniz.</div>}
-            </div>
+            ) : (
+              <div className="bg-gradient-to-r from-indigo-50 to-slate-50 dark:from-indigo-950/20 dark:to-slate-900/20 border border-indigo-200 dark:border-indigo-900/30 rounded-2xl p-6 backdrop-blur-md transition-colors duration-200">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Düelloya Katıl (Yeni Kupon)</h3>
+                
+                <div className="flex flex-wrap items-end gap-4">
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="block text-sm text-slate-550 dark:text-slate-400 mb-2">Yatırılacak Tutar (Coin)</label>
+                    <input 
+                      type="number"
+                      value={betAmount}
+                      onChange={(e) => setBetAmount(e.target.value)}
+                      className="w-full bg-white dark:bg-slate-900/60 border border-slate-250 dark:border-slate-600 text-slate-900 dark:text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors"
+                      placeholder="Örn: 100"
+                    />
+                  </div>
+                  
+                  <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl px-6 py-3 min-w-[150px] transition-colors duration-200">
+                    <div className="text-sm text-slate-500 dark:text-slate-400">Toplam Oran</div>
+                    <div className="text-2xl font-bold text-yellow-650 dark:text-yellow-400">{currentTotalOdd.toFixed(2)}</div>
+                  </div>
+                  
+                  <button 
+                    onClick={handleJoin}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-8 rounded-xl transition-colors shadow-lg shadow-indigo-500/20 cursor-pointer"
+                  >
+                    Savaşa Katıl
+                  </button>
+                </div>
+                
+                {joinError && <div className="mt-4 text-rose-600 dark:text-red-400 text-sm bg-rose-50 dark:bg-red-900/20 p-3 rounded-lg border border-rose-200 dark:border-red-500/30">{joinError}</div>}
+                {joinSuccess && <div className="mt-4 text-emerald-600 dark:text-green-400 text-sm bg-emerald-50 dark:bg-green-900/20 p-3 rounded-lg border border-emerald-200 dark:border-green-500/30">Başarıyla katıldınız! Şeffaflık panosundan diğerleriyle birlikte kuponunuzu görebilirsiniz. Başka bir kupon daha yapabilirsiniz.</div>}
+              </div>
+            )
           )}
         </div>
 

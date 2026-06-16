@@ -221,8 +221,13 @@ export default function Profile() {
                         return (
                           <div key={sel.id} className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2 last:border-0 last:pb-0 transition-colors duration-200">
                             <div>
-                              <div className="font-semibold text-slate-800 dark:text-slate-200 text-sm">
-                                {d?.home_team} - {d?.away_team}
+                              <div className="font-semibold text-slate-800 dark:text-slate-200 text-sm flex items-center gap-2">
+                                <span>{d?.home_team} - {d?.away_team}</span>
+                                {d?.match_status !== 'not_started' && (
+                                  <span className="text-xs font-mono font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                                    {d?.home_score} - {d?.away_score}
+                                  </span>
+                                )}
                               </div>
                               <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
                                 <span>{formatDate(d?.start_date)}</span>
@@ -233,10 +238,21 @@ export default function Profile() {
                             </div>
                             <div className="flex items-center gap-3">
                               <span className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded transition-colors duration-200">{d?.bet_type}</span>
-                              {sel.status === "void" && (
-                                <span className="text-xs font-bold text-orange-500 bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded">İADE</span>
+                              
+                              {sel.status === "won" && (
+                                <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold rounded">Kazandı</span>
                               )}
-                              <span className={`font-mono font-bold ${sel.status === 'void' ? 'line-through text-slate-400 dark:text-slate-600' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                              {sel.status === "lost" && (
+                                <span className="px-2 py-0.5 bg-rose-100 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400 text-[10px] font-bold rounded">Kaybetti</span>
+                              )}
+                              {sel.status === "void" && (
+                                <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 text-orange-700 dark:text-orange-400 text-[10px] font-bold rounded">İade</span>
+                              )}
+                              {sel.status === "pending" && (
+                                <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 text-slate-650 dark:text-slate-400 text-[10px] font-bold rounded">Bekliyor</span>
+                              )}
+
+                              <span className={`font-mono font-bold ${sel.status === 'void' ? 'line-through text-slate-400 dark:text-slate-600' : 'text-indigo-600 dark:text-indigo-400'}`}>
                                 @{d?.odd_value.toFixed(2)}
                               </span>
                             </div>

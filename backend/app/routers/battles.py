@@ -205,10 +205,17 @@ def join_battle(invite_code: str, slip_in: schemas.SlipCreate, db: Session = Dep
     if battle.status != "active":
         raise HTTPException(status_code=400, detail="Bu düello çoktan sonuçlanmış.")
         
+    # Mükerrer katılım kontrolü
+    is_in = db.query(models.BattleParticipant).filter(
+        models.BattleParticipant.battle_id == battle.id,
+        models.BattleParticipant.user_id == current_user.id
+    ).first()
+    if is_in:
+        raise HTTPException(status_code=400, detail="Bu düelloya zaten katıldınız.")
+        
     if battle.max_participants:
         unique_users = db.query(models.BattleParticipant.user_id).filter(models.BattleParticipant.battle_id == battle.id).distinct().count()
-        is_in = db.query(models.BattleParticipant).filter(models.BattleParticipant.battle_id == battle.id, models.BattleParticipant.user_id == current_user.id).first()
-        if not is_in and unique_users >= battle.max_participants:
+        if unique_users >= battle.max_participants:
             raise HTTPException(status_code=400, detail="Kişi limiti dolmuş.")
             
     earliest = get_battle_earliest_start(db, battle.id)

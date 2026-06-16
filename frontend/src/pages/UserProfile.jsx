@@ -98,12 +98,33 @@ export default function UserProfile() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {slip.selections.map(sel => (
                     <div key={sel.id} className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3 flex justify-between items-center border border-slate-200 dark:border-slate-800">
-                      <div className="truncate pr-4 text-sm text-slate-700 dark:text-slate-300">
-                        {sel.odd_details?.home_team || "Bilinmeyen Takım"} - {sel.odd_details?.away_team || "Bilinmeyen Takım"}
+                      <div className="truncate pr-4 text-sm text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                        <span>{sel.odd_details?.home_team || "Bilinmeyen Takım"} - {sel.odd_details?.away_team || "Bilinmeyen Takım"}</span>
+                        {sel.odd_details?.match_status !== 'not_started' && (
+                          <span className="text-xs font-mono font-bold text-slate-500 bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                            {sel.odd_details?.home_score} - {sel.odd_details?.away_score}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded text-slate-655 dark:text-slate-400">{sel.odd_details?.bet_type || "MS"}</span>
-                        <span className="font-bold text-indigo-650 dark:text-indigo-400">{(sel.odd_value ?? sel.odd_details?.odd_value ?? 1.0).toFixed(2)}</span>
+                        <span className="text-xs bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded text-slate-650 dark:text-slate-400">{sel.odd_details?.bet_type || "MS"}</span>
+                        
+                        {sel.status === "won" && (
+                          <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold rounded">Kazandı</span>
+                        )}
+                        {sel.status === "lost" && (
+                          <span className="px-2 py-0.5 bg-rose-100 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-400 text-[10px] font-bold rounded">Kaybetti</span>
+                        )}
+                        {sel.status === "void" && (
+                          <span className="px-2 py-0.5 bg-orange-100 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-900/50 text-orange-700 dark:text-orange-400 text-[10px] font-bold rounded">İade</span>
+                        )}
+                        {sel.status === "pending" && (
+                          <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-[10px] font-bold rounded">Bekliyor</span>
+                        )}
+
+                        <span className={`font-mono font-bold ${sel.status === 'void' ? 'line-through text-slate-400 dark:text-slate-600' : 'text-indigo-600 dark:text-indigo-400'}`}>
+                          {(sel.odd_value ?? sel.odd_details?.odd_value ?? 1.0).toFixed(2)}
+                        </span>
                       </div>
                     </div>
                   ))}
