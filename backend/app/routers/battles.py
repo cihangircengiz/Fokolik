@@ -28,6 +28,27 @@ def create_battle(battle_in: schemas.BattleCreate, db: Session = Depends(get_db)
     if len(battle_in.match_ids) < 2 or len(battle_in.match_ids) > 5:
         raise HTTPException(status_code=400, detail="Düello en az 2, en fazla 5 maç içerebilir.")
         
+    # Validation if creator wants to join automatically
+    has_creator_slip = battle_in.creator_odd_ids is not None and battle_in.creator_bet_amount is not None
+    if has_creator_slip:
+        if battle_in.creator_bet_amount <= 0:
+            raise HTTPException(status_code=400, detail="Bahis miktarı sıfırdan büyük olmalıdır.")
+        if current_user.coin_balance < battle_in.creator_bet_amount:
+            raise HTTPException(status_code=400, detail="Coin bakiyen yetersiz.")
+        if len(battle_in.creator_odd_ids) != len(battle_in.match_ids):
+            raise HTTPException(status_code=400, detail="Düellodaki tüm maçlar için tahmin yapmalısın.")
+            
+        # Verify odds belong to the match_ids
+        battle_match_ids = set(battle_in.match_ids)
+        total_odd = 1.0
+        for odd_id in battle_in.creator_odd_ids:
+            odd = db.query(models.Odd).filter(models.Odd.id == odd_id).first()
+            if not odd:
+                raise HTTPException(status_code=400, detail="Seçilen oran bulunamadı.")
+            if odd.match_id not in battle_match_ids:
+                raise HTTPException(status_code=400, detail="Seçtiğin oran düellodaki maçlardan birine ait değil.")
+            total_odd *= odd.odd_value
+            
     # Davet kodu üret (8 Haneli)
     invite_code = str(uuid.uuid4())[:8].upper()
     db_battle = models.Battle(
@@ -37,8 +58,7 @@ def create_battle(battle_in: schemas.BattleCreate, db: Session = Depends(get_db)
         max_participants=battle_in.max_participants
     )
     db.add(db_battle)
-    db.commit()
-    db.refresh(db_battle)
+    db.flush()  # Generate battle ID
     
     for m_id in battle_in.match_ids:
         db_match = db.query(models.Match).filter(models.Match.id == m_id).first()
@@ -46,6 +66,31 @@ def create_battle(battle_in: schemas.BattleCreate, db: Session = Depends(get_db)
             raise HTTPException(status_code=400, detail=f"Maç {m_id} bulunamadı.")
         bm = models.BattleMatch(battle_id=db_battle.id, match_id=m_id)
         db.add(bm)
+        
+    if has_creator_slip:
+        current_user.coin_balance -= battle_in.creator_bet_amount
+        
+        db_slip = models.Slip(
+            user_id=current_user.id,
+            amount=battle_in.creator_bet_amount,
+            total_odd=round(total_odd, 2),
+            status="pending"
+        )
+        db.add(db_slip)
+        db.flush()
+        
+        for odd_id in battle_in.creator_odd_ids:
+            odd = db.query(models.Odd).filter(models.Odd.id == odd_id).first()
+            db_sel = models.SlipSelection(slip_id=db_slip.id, odd_id=odd_id, odd_value=odd.odd_value)
+            db.add(db_sel)
+            
+        bp = models.BattleParticipant(
+            battle_id=db_battle.id,
+            user_id=current_user.id,
+            slip_id=db_slip.id,
+            earned_points=0
+        )
+        db.add(bp)
         
     db.commit()
     return get_battle_by_code(invite_code, db)

@@ -204,12 +204,30 @@ export default function Home() {
             toast.error("Düello başlatmak için 2 ile 5 arasında maç seçmelisiniz.");
             return;
         }
+        if (selectedOdds.length !== uniqueMatchIds.length) {
+            toast.error("Düello için her maçtan sadece bir tahmin seçmelisiniz.");
+            return;
+        }
+        
+        const oddIds = selectedOdds.map(item => item.odd.id);
+        const amount = parseFloat(betAmount);
+        if (isNaN(amount) || amount <= 0) {
+            toast.error("Lütfen geçerli bir bahis miktarı girin.");
+            return;
+        }
+        if (amount > (user.coin_balance ?? user.balance ?? 0)) {
+            toast.error("Yetersiz bakiye! Lütfen kupon tutarını düşürün.");
+            return;
+        }
+
         setLoading(true);
         try {
             const payload = {
                 match_ids: uniqueMatchIds,
                 is_public: battleIsPublic,
-                max_participants: battleLimit ? parseInt(battleLimit) : null
+                max_participants: battleLimit ? parseInt(battleLimit) : null,
+                creator_odd_ids: oddIds,
+                creator_bet_amount: amount
             };
             const res = await fetch(`${API_BASE_URL}/battles/`, {
                 method: 'POST',

@@ -98,6 +98,8 @@ class BattleCreate(BaseModel):
     match_ids: List[str]
     is_public: bool = True
     max_participants: Optional[int] = None
+    creator_odd_ids: Optional[List[int]] = None
+    creator_bet_amount: Optional[float] = None
 
 class BattleParticipantResponse(BaseModel):
     id: int
