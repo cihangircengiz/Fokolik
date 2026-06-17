@@ -70,8 +70,8 @@ MARKET_TYPES = {
             2: "3.5 Üst",
         }
     },
-    14: {
-        # MTID 14 = Alt/Üst 1.5
+    11: {
+        # MTID 11 = Alt/Üst 1.5
         "name": "Alt/Üst 1.5",
         "outcomes": {
             1: "1.5 Alt",
@@ -97,8 +97,8 @@ MARKET_TYPES = {
             3: "İY ÇŞ X-2",
         }
     },
-    49: {
-        # MTID 49 = İlk Yarı 1.5 Alt/Üst
+    14: {
+        # MTID 14 = İlk Yarı 1.5 Alt/Üst
         "name": "İlk Yarı 1.5 Alt/Üst",
         "outcomes": {
             1: "İY 1.5 Alt",
@@ -271,9 +271,9 @@ class NesineFetcher:
                 continue
             if mtid == 13 and market.get("SOV", 0) != 3.5:
                 continue
-            if mtid == 14 and market.get("SOV", 0) != 1.5:
+            if mtid == 11 and market.get("SOV", 0) != 1.5:
                 continue
-            if mtid == 49 and market.get("SOV", 0) != 1.5:
+            if mtid == 14 and market.get("SOV", 0) != 1.5:
                 continue
             if mtid == 295 and market.get("SOV", 0) != 0.5:
                 continue
