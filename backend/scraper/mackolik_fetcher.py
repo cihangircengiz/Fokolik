@@ -96,7 +96,7 @@ def process_mackolik_matches(db: Session, days_forward: int = 3):
     and update their status/scores if they do exist.
     """
     today = datetime.now()
-    dates_to_fetch = [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(days_forward)]
+    dates_to_fetch = [(today + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(-1, days_forward)]
 
     updated_matches_data = []
     newly_finished_ids = []
