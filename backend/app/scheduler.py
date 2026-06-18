@@ -2,6 +2,7 @@ import logging
 import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from apscheduler.triggers.cron import CronTrigger
 
 from app.database import SessionLocal
 from app.ws_manager import manager
@@ -9,6 +10,7 @@ from app.settlement import settle_finished_matches
 from app.telemetry import update_worker_status
 from scraper.mackolik_fetcher import process_mackolik_matches
 from scraper.fetcher import process_nesine_odds
+from app.battles_reward import distribute_monthly_rewards
 from datetime import datetime
 
 logger = logging.getLogger("scheduler")
@@ -81,6 +83,15 @@ def start_scheduler():
         name="Nesine Odds Matcher",
         replace_existing=True,
         next_run_time=datetime.now()
+    )
+    
+    # Run on the 1st day of every month at 00:01
+    scheduler.add_job(
+        distribute_monthly_rewards,
+        trigger=CronTrigger(day=1, hour=0, minute=1),
+        id="monthly_battle_rewards",
+        name="Monthly Battle Rewards",
+        replace_existing=True
     )
     
     scheduler.start()

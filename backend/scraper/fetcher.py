@@ -36,8 +36,8 @@ MARKET_TYPES = {
             3: "MS 2",   # Away win
         }
     },
-    3: {
-        # MTID 3 = İlk Yarı Sonucu (First Half Result) — 3-way
+    7: {
+        # MTID 7 = İlk Yarı Sonucu (First Half Result) — 3-way
         "name": "İlk Yarı Sonucu",
         "outcomes": {
             1: "İY 1",   # Home leads at half-time
