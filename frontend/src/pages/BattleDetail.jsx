@@ -57,11 +57,7 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
       return;
     }
     
-    const amount = parseFloat(betAmount);
-    if (isNaN(amount) || amount <= 0) {
-      setJoinError("Geçerli bir tutar girin.");
-      return;
-    }
+    const amount = 1000;
 
     try {
       const oddIds = Object.values(selections).map(odd => odd.id);
@@ -83,7 +79,6 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
       }
       setJoinSuccess(true);
       setSelections({});
-      setBetAmount("");
       
       // Bakiyeyi düş/güncelle
       if (setUserBalance) {
@@ -392,14 +387,11 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
                 
                 <div className="flex flex-wrap items-end gap-4">
                   <div className="flex-1 min-w-[200px]">
-                    <label className="block text-sm text-slate-550 dark:text-slate-400 mb-2">Yatırılacak Tutar (Coin)</label>
-                    <input 
-                      type="number"
-                      value={betAmount}
-                      onChange={(e) => setBetAmount(e.target.value)}
-                      className="w-full bg-white dark:bg-slate-900/60 border border-slate-250 dark:border-slate-600 text-slate-900 dark:text-white px-4 py-3 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors"
-                      placeholder="Örn: 100"
-                    />
+                    <label className="block text-sm text-slate-550 dark:text-slate-400 mb-2">Katılım Bedeli (Coin)</label>
+                    <div className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-250 dark:border-slate-600 text-slate-900 dark:text-white px-4 py-3 rounded-xl flex items-center justify-between font-bold">
+                        <span>Sabit Tutar</span>
+                        <span className="text-indigo-600 dark:text-indigo-400 font-mono text-lg">1000</span>
+                    </div>
                   </div>
                   
                   <div className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700 rounded-xl px-6 py-3 min-w-[150px] transition-colors duration-200">

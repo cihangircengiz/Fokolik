@@ -210,13 +210,10 @@ export default function Home() {
         }
         
         const oddIds = selectedOdds.map(item => item.odd.id);
-        const amount = parseFloat(betAmount);
-        if (isNaN(amount) || amount <= 0) {
-            toast.error("Lütfen geçerli bir bahis miktarı girin.");
-            return;
-        }
+        const amount = 1000; // Fixed battle creation cost
+        
         if (amount > (user.coin_balance ?? user.balance ?? 0)) {
-            toast.error("Yetersiz bakiye! Lütfen kupon tutarını düşürün.");
+            toast.error("Yetersiz bakiye! Düello oluşturmak için 1000 Coin gerekiyor.");
             return;
         }
 
@@ -906,6 +903,11 @@ export default function Home() {
                                     onChange={(e) => setBattleLimit(e.target.value)}
                                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-slate-100 focus:border-indigo-500 outline-none transition-all"
                                 />
+                            </div>
+                            
+                            <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-500/30 p-4 rounded-xl flex justify-between items-center mt-2">
+                                <span className="text-sm font-bold text-indigo-800 dark:text-indigo-300">Katılım Bedeli:</span>
+                                <span className="font-bold text-indigo-600 dark:text-indigo-400 font-mono text-lg">1000 Coin</span>
                             </div>
                         </div>
 
