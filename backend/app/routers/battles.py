@@ -31,7 +31,7 @@ def create_battle(battle_in: schemas.BattleCreate, db: Session = Depends(get_db)
     # Validation if creator wants to join automatically
     has_creator_slip = bool(battle_in.creator_odd_ids)
     if has_creator_slip:
-        battle_in.creator_bet_amount = 1000.0
+        battle_in.creator_bet_amount = 500.0
 
         if current_user.coin_balance < battle_in.creator_bet_amount:
             raise HTTPException(status_code=400, detail="Coin bakiyen yetersiz.")
@@ -231,7 +231,7 @@ def join_battle(invite_code: str, slip_in: schemas.SlipCreate, db: Session = Dep
     if len(slip_in.odd_ids) != len(battle_match_ids):
         raise HTTPException(status_code=400, detail="Düellodaki TÜM maçlar için bir tahmin yapmalısın.")
         
-    slip_in.amount = 1000.0
+    slip_in.amount = 500.0
     if current_user.coin_balance < slip_in.amount:
         raise HTTPException(status_code=400, detail="Coin bakiyen yetersiz.")
         

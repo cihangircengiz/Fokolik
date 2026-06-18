@@ -57,7 +57,7 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
       return;
     }
     
-    const amount = 1000;
+    const amount = 500;
 
     try {
       const oddIds = Object.values(selections).map(odd => odd.id);
@@ -390,7 +390,7 @@ export default function BattleDetail({ userBalance, setUserBalance }) {
                     <label className="block text-sm text-slate-550 dark:text-slate-400 mb-2">Katılım Bedeli (Coin)</label>
                     <div className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-250 dark:border-slate-600 text-slate-900 dark:text-white px-4 py-3 rounded-xl flex items-center justify-between font-bold">
                         <span>Sabit Tutar</span>
-                        <span className="text-indigo-600 dark:text-indigo-400 font-mono text-lg">1000</span>
+                        <span className="text-indigo-600 dark:text-indigo-400 font-mono text-lg">500</span>
                     </div>
                   </div>
                   

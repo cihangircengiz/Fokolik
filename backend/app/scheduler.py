@@ -11,6 +11,7 @@ from app.telemetry import update_worker_status
 from scraper.mackolik_fetcher import process_mackolik_matches
 from scraper.fetcher import process_nesine_odds
 from app.battles_reward import distribute_monthly_rewards
+from app.odds_integrity import check_and_fix_odds
 from datetime import datetime
 
 logger = logging.getLogger("scheduler")
@@ -65,6 +66,16 @@ async def job_nesine_odds():
     finally:
         db.close()
 
+async def check_and_fix_odds_job():
+    """Runs the odds integrity checker."""
+    db = SessionLocal()
+    try:
+        await asyncio.to_thread(check_and_fix_odds, db)
+    except Exception as e:
+        logger.error(f"Error in odds integrity job: {e}", exc_info=True)
+    finally:
+        db.close()
+
 def start_scheduler():
     logger.info("Starting APScheduler...")
     scheduler.add_job(
@@ -81,6 +92,16 @@ def start_scheduler():
         trigger=IntervalTrigger(minutes=1),
         id="nesine_odds",
         name="Nesine Odds Matcher",
+        replace_existing=True,
+        next_run_time=datetime.now()
+    )
+    
+    # Run the odds integrity worker every 2 minutes to fix bad odds automatically
+    scheduler.add_job(
+        check_and_fix_odds_job,
+        trigger=IntervalTrigger(minutes=2),
+        id="odds_integrity",
+        name="Odds Integrity Checker",
         replace_existing=True,
         next_run_time=datetime.now()
     )
