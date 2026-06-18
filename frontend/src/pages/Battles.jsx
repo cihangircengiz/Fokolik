@@ -9,6 +9,7 @@ export default function Battles() {
   const [myBattles, setMyBattles] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [inviteCodeInput, setInviteCodeInput] = useState("");
+  const [activeTab, setActiveTab] = useState("today");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -72,8 +73,27 @@ export default function Battles() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Sol Taraf: Lobi ve Benim Düellolarım */}
         <div className="lg:col-span-2 space-y-8">
-          {/* Benim Düellolarım */}
-          {myBattles.filter(b => b.status !== 'completed').length > 0 && (
+          <div className="flex gap-6 border-b border-slate-200 dark:border-slate-700/50">
+            <button 
+              onClick={() => setActiveTab('today')}
+              className={`pb-3 px-2 font-bold text-lg transition-colors relative ${activeTab === 'today' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
+            >
+              Bugün
+              {activeTab === 'today' && <div className="absolute bottom-[-1px] left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full"></div>}
+            </button>
+            <button 
+              onClick={() => setActiveTab('past')}
+              className={`pb-3 px-2 font-bold text-lg transition-colors relative ${activeTab === 'past' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'}`}
+            >
+              Geçmiş
+              {activeTab === 'past' && <div className="absolute bottom-[-1px] left-0 w-full h-0.5 bg-indigo-600 dark:bg-indigo-400 rounded-t-full"></div>}
+            </button>
+          </div>
+
+          {activeTab === 'today' ? (
+            <>
+              {/* Benim Düellolarım */}
+              {myBattles.filter(b => b.status !== 'completed').length > 0 && (
             <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-6 backdrop-blur-md transition-colors duration-200">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <span className="text-indigo-500">⚔️</span> Benim Düellolarım
@@ -128,6 +148,35 @@ export default function Battles() {
               </div>
             )}
           </div>
+            </>
+          ) : (
+            <div className="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-6 backdrop-blur-md transition-colors duration-200">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <span className="text-slate-500">📜</span> Geçmiş Düellolarım
+              </h2>
+              {myBattles.filter(b => b.status === 'completed').length === 0 ? (
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                  Henüz tamamlanmış bir düellon yok.
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {myBattles.filter(b => b.status === 'completed').map(b => (
+                    <Link key={b.id} to={`/battles/${b.invite_code}`} className="block bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-4 transition-all hover:scale-[1.01]">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="text-slate-900 dark:text-white font-bold mb-1">Düello: {b.invite_code}</div>
+                          <div className="text-sm text-slate-500 dark:text-slate-400">{b.matches.length} Maç • <span className="text-slate-500 font-semibold">Tamamlandı</span></div>
+                        </div>
+                        <div className="text-indigo-600 dark:text-indigo-400 font-bold">
+                          Görüntüle ➔
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Sağ Taraf: Leaderboard */}

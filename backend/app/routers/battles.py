@@ -121,8 +121,7 @@ def get_my_battles(db: Session = Depends(get_db), current_user: models.User = De
     result = []
     for bid in b_ids:
         b = db.query(models.Battle).filter(
-            models.Battle.id == bid,
-            models.Battle.status != "completed"
+            models.Battle.id == bid
         ).first()
         if b:
             result.append(get_battle_by_code(b.invite_code, db))
