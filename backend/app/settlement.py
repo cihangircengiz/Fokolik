@@ -76,12 +76,20 @@ def settle_finished_matches(db: Session, finished_match_ids: list) -> list:
     logger.info(f"Found {len(pending_selections)} pending selections for {len(finished_match_ids)} finished matches.")
 
     # 2. Evaluate each selection
+    odd_ids = [sel.odd_id for sel in pending_selections]
+    odds = db.query(models.Odd).filter(models.Odd.id.in_(odd_ids)).all() if odd_ids else []
+    odds_dict = {o.id: o for o in odds}
+    
+    match_ids = [o.match_id for o in odds]
+    matches = db.query(models.Match).filter(models.Match.id.in_(match_ids)).all() if match_ids else []
+    matches_dict = {m.id: m for m in matches}
+
     for sel in pending_selections:
-        odd = db.query(models.Odd).filter(models.Odd.id == sel.odd_id).first()
+        odd = odds_dict.get(sel.odd_id)
         if not odd:
             continue
 
-        match = db.query(models.Match).filter(models.Match.id == odd.match_id).first()
+        match = matches_dict.get(odd.match_id)
         if not match or match.status != "finished":
             continue
 
@@ -107,14 +115,31 @@ def settle_finished_matches(db: Session, finished_match_ids: list) -> list:
     # Get unique slip IDs from the selections we just evaluated
     affected_slip_ids = set(sel.slip_id for sel in pending_selections)
 
+    slips = db.query(models.Slip).filter(models.Slip.id.in_(affected_slip_ids)).all() if affected_slip_ids else []
+    slips_dict = {s.id: s for s in slips}
+
+    all_selections = db.query(models.SlipSelection).filter(
+        models.SlipSelection.slip_id.in_(affected_slip_ids)
+    ).all() if affected_slip_ids else []
+    
+    selections_by_slip = {}
+    for s in all_selections:
+        selections_by_slip.setdefault(s.slip_id, []).append(s)
+        
+    all_odd_ids = [s.odd_id for s in all_selections]
+    all_odds = db.query(models.Odd).filter(models.Odd.id.in_(all_odd_ids)).all() if all_odd_ids else []
+    all_odds_dict = {o.id: o for o in all_odds}
+
+    user_ids = [s.user_id for s in slips]
+    users = db.query(models.User).filter(models.User.id.in_(user_ids)).all() if user_ids else []
+    users_dict = {u.id: u for u in users}
+
     for slip_id in affected_slip_ids:
-        slip = db.query(models.Slip).filter(models.Slip.id == slip_id).first()
+        slip = slips_dict.get(slip_id)
         if not slip or slip.status != "pending":
             continue
 
-        selections = db.query(models.SlipSelection).filter(
-            models.SlipSelection.slip_id == slip_id
-        ).all()
+        selections = selections_by_slip.get(slip_id, [])
 
         # Check if all selections are resolved (no more "pending")
         statuses = [s.status for s in selections]
@@ -139,14 +164,14 @@ def settle_finished_matches(db: Session, finished_match_ids: list) -> list:
             new_total_odd = 1.0
             for s in selections:
                 if s.status == "won":
-                    odd = db.query(models.Odd).filter(models.Odd.id == s.odd_id).first()
+                    odd = all_odds_dict.get(s.odd_id)
                     if odd:
                         new_total_odd *= odd.odd_value
             
             payout = round(slip.amount * new_total_odd, 2)
 
             # Credit winnings to user
-            user = db.query(models.User).filter(models.User.id == slip.user_id).first()
+            user = users_dict.get(slip.user_id)
             if user:
                 user.coin_balance += payout
                 logger.info(
@@ -201,12 +226,21 @@ def settle_finished_matches(db: Session, finished_match_ids: list) -> list:
                 # But since we update total_odd conceptually, let's just use the recalculated one or slip.total_odd if we updated it
                 # Actually, we didn't update slip.total_odd in DB, we just calculated payout. Let's update slip.total_odd in DB too.
                 # I'll modify the above loop slightly implicitly by recalculating here:
+                battle_selections = db.query(models.SlipSelection).filter(models.SlipSelection.slip_id.in_(slip_ids_in_battle)).all() if slip_ids_in_battle else []
+                battle_selections_by_slip = {}
+                for s in battle_selections:
+                    battle_selections_by_slip.setdefault(s.slip_id, []).append(s)
+                    
+                battle_odd_ids = [s.odd_id for s in battle_selections]
+                battle_odds = db.query(models.Odd).filter(models.Odd.id.in_(battle_odd_ids)).all() if battle_odd_ids else []
+                battle_odds_dict = {o.id: o for o in battle_odds}
+                
                 def get_real_odd(slip):
-                    selections = db.query(models.SlipSelection).filter(models.SlipSelection.slip_id == slip.id).all()
+                    selections = battle_selections_by_slip.get(slip.id, [])
                     tot = 1.0
                     for sel in selections:
                         if sel.status == "won":
-                            odd = db.query(models.Odd).filter(models.Odd.id == sel.odd_id).first()
+                            odd = battle_odds_dict.get(sel.odd_id)
                             if odd: tot *= odd.odd_value
                     return tot
 

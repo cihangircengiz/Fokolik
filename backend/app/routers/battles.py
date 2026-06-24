@@ -40,9 +40,13 @@ def create_battle(battle_in: schemas.BattleCreate, db: Session = Depends(get_db)
             
         # Verify odds belong to the match_ids
         battle_match_ids = set(battle_in.match_ids)
+        
+        odds = db.query(models.Odd).filter(models.Odd.id.in_(battle_in.creator_odd_ids)).all()
+        odds_dict = {o.id: o for o in odds}
+        
         total_odd = 1.0
         for odd_id in battle_in.creator_odd_ids:
-            odd = db.query(models.Odd).filter(models.Odd.id == odd_id).first()
+            odd = odds_dict.get(odd_id)
             if not odd:
                 raise HTTPException(status_code=400, detail="Seçilen oran bulunamadı.")
             if odd.match_id not in battle_match_ids:
@@ -60,8 +64,11 @@ def create_battle(battle_in: schemas.BattleCreate, db: Session = Depends(get_db)
     db.add(db_battle)
     db.flush()  # Generate battle ID
     
+    db_matches = db.query(models.Match).filter(models.Match.id.in_(battle_in.match_ids)).all()
+    db_matches_dict = {m.id: m for m in db_matches}
+    
     for m_id in battle_in.match_ids:
-        db_match = db.query(models.Match).filter(models.Match.id == m_id).first()
+        db_match = db_matches_dict.get(m_id)
         if not db_match:
             raise HTTPException(status_code=400, detail=f"Maç {m_id} bulunamadı.")
         bm = models.BattleMatch(battle_id=db_battle.id, match_id=m_id)
@@ -80,7 +87,7 @@ def create_battle(battle_in: schemas.BattleCreate, db: Session = Depends(get_db)
         db.flush()
         
         for odd_id in battle_in.creator_odd_ids:
-            odd = db.query(models.Odd).filter(models.Odd.id == odd_id).first()
+            odd = odds_dict.get(odd_id)
             db_sel = models.SlipSelection(slip_id=db_slip.id, odd_id=odd_id, odd_value=odd.odd_value)
             db.add(db_sel)
             

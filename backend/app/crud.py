@@ -92,15 +92,22 @@ def create_slip(db: Session, slip_data: schemas.SlipCreate, user_id: int):
     total_odd = 1.0
     now = datetime.now()
 
+    odds = db.query(models.Odd).filter(models.Odd.id.in_(slip_data.odd_ids)).all()
+    odds_dict = {o.id: o for o in odds}
+    
+    match_ids = [o.match_id for o in odds]
+    matches = db.query(models.Match).filter(models.Match.id.in_(match_ids)).all()
+    matches_dict = {m.id: m for m in matches}
+
     for odd_id in slip_data.odd_ids:
-        odd = db.query(models.Odd).filter(models.Odd.id == odd_id).first()
+        odd = odds_dict.get(odd_id)
         if not odd:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Odd with ID {odd_id} not found"
             )
         
-        match = db.query(models.Match).filter(models.Match.id == odd.match_id).first()
+        match = matches_dict.get(odd.match_id)
         if not match:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -147,12 +154,21 @@ def create_slip(db: Session, slip_data: schemas.SlipCreate, user_id: int):
 
 def format_slip(db: Session, slip: models.Slip) -> schemas.SlipResponse:
     selections_res = []
+    
+    odd_ids = [sel.odd_id for sel in slip.selections]
+    odds = db.query(models.Odd).filter(models.Odd.id.in_(odd_ids)).all() if odd_ids else []
+    odds_dict = {o.id: o for o in odds}
+    
+    match_ids = [o.match_id for o in odds]
+    matches = db.query(models.Match).filter(models.Match.id.in_(match_ids)).all() if match_ids else []
+    matches_dict = {m.id: m for m in matches}
+    
     for sel in slip.selections:
         # Load odd and match details
-        odd = db.query(models.Odd).filter(models.Odd.id == sel.odd_id).first()
+        odd = odds_dict.get(sel.odd_id)
         odd_details = None
         if odd:
-            match = db.query(models.Match).filter(models.Match.id == odd.match_id).first()
+            match = matches_dict.get(odd.match_id)
             if match:
                 odd_details = schemas.SlipSelectionDetails(
                     id=odd.id,
@@ -220,10 +236,18 @@ def cancel_slip(db: Session, slip_id: int, user_id: int):
 
     # 3. Verify that none of the matches have started yet
     now = datetime.now()
+    odd_ids = [sel.odd_id for sel in slip.selections]
+    odds = db.query(models.Odd).filter(models.Odd.id.in_(odd_ids)).all() if odd_ids else []
+    odds_dict = {o.id: o for o in odds}
+    
+    match_ids = [o.match_id for o in odds]
+    matches = db.query(models.Match).filter(models.Match.id.in_(match_ids)).all() if match_ids else []
+    matches_dict = {m.id: m for m in matches}
+    
     for sel in slip.selections:
-        odd = db.query(models.Odd).filter(models.Odd.id == sel.odd_id).first()
+        odd = odds_dict.get(sel.odd_id)
         if odd:
-            match = db.query(models.Match).filter(models.Match.id == odd.match_id).first()
+            match = matches_dict.get(odd.match_id)
             if match and match.start_date <= now:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
