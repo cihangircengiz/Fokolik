@@ -22,7 +22,7 @@ async def job_mackolik_live_updates():
     """Fetches live scores from Mackolik, updates DB, broadcasts and settles."""
     db = SessionLocal()
     try:
-        updated_matches, newly_finished_ids = process_mackolik_matches(db, days_forward=3)
+        updated_matches, newly_finished_ids = await asyncio.to_thread(process_mackolik_matches, db, days_forward=3)
         
         if updated_matches:
             logger.info(f"Broadcasting {len(updated_matches)} match updates.")
