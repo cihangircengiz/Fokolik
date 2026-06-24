@@ -22,7 +22,7 @@ async def job_mackolik_live_updates():
     """Fetches live scores from Mackolik, updates DB, broadcasts and settles."""
     db = SessionLocal()
     try:
-        updated_matches, newly_finished_ids = process_mackolik_matches(db, days_forward=3)
+        updated_matches, newly_finished_ids = await asyncio.to_thread(process_mackolik_matches, db, days_forward=3)
         
         if updated_matches:
             logger.info(f"Broadcasting {len(updated_matches)} match updates.")
@@ -30,14 +30,14 @@ async def job_mackolik_live_updates():
             
         if newly_finished_ids:
             logger.info(f"Settling {len(newly_finished_ids)} finished matches...")
-            settled = settle_finished_matches(db, newly_finished_ids)
+            settled = await asyncio.to_thread(settle_finished_matches, db, newly_finished_ids)
             if settled:
                 for s in settled:
                     await manager.broadcast_slip_settled(s["slip_id"], s["status"], s["user_id"], s["payout"])
                     
         # Check and settle stale/voided matches (e.g. 4 hours past start time)
         from app.settlement import settle_voided_matches
-        voided = settle_voided_matches(db, max_hours_past=4)
+        voided = await asyncio.to_thread(settle_voided_matches, db, max_hours_past=4)
         if voided:
             for s in voided:
                 await manager.broadcast_slip_settled(s["slip_id"], s["status"], s["user_id"], s["payout"])
