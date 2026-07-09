@@ -25,6 +25,10 @@ SETTLEMENT_RULES = {
     "İY 1": lambda m: m.ht_home_score > m.ht_away_score,
     "İY 0": lambda m: m.ht_home_score == m.ht_away_score,
     "İY 2": lambda m: m.ht_away_score > m.ht_home_score,
+    # ASCII 'I' variants (scraper bazen 'IY' olarak kaydediyor)
+    "IY 1": lambda m: m.ht_home_score > m.ht_away_score,
+    "IY 0": lambda m: m.ht_home_score == m.ht_away_score,
+    "IY 2": lambda m: m.ht_away_score > m.ht_home_score,
     "ÇŞ 1-X": lambda m: m.home_score >= m.away_score,
     "ÇŞ 1-2": lambda m: m.home_score != m.away_score,
     "ÇŞ X-2": lambda m: m.away_score >= m.home_score,
@@ -34,9 +38,14 @@ SETTLEMENT_RULES = {
     "3.5 Üst": lambda m: (m.home_score + m.away_score) >= 4,
     "İY 1.5 Alt": lambda m: (m.ht_home_score + m.ht_away_score) <= 1,
     "İY 1.5 Üst": lambda m: (m.ht_home_score + m.ht_away_score) >= 2,
+    "IY 1.5 Alt": lambda m: (m.ht_home_score + m.ht_away_score) <= 1,
+    "IY 1.5 Üst": lambda m: (m.ht_home_score + m.ht_away_score) >= 2,
     "İY ÇŞ 1-X": lambda m: m.ht_home_score >= m.ht_away_score,
     "İY ÇŞ 1-2": lambda m: m.ht_home_score != m.ht_away_score,
     "İY ÇŞ X-2": lambda m: m.ht_away_score >= m.ht_home_score,
+    "IY ÇŞ 1-X": lambda m: m.ht_home_score >= m.ht_away_score,
+    "IY ÇŞ 1-2": lambda m: m.ht_home_score != m.ht_away_score,
+    "IY ÇŞ X-2": lambda m: m.ht_away_score >= m.ht_home_score,
     "Ev 0.5 Alt": lambda m: m.home_score == 0,
     "Ev 0.5 Üst": lambda m: m.home_score >= 1,
     "TG 0-1": lambda m: 0 <= (m.home_score + m.away_score) <= 1,
@@ -45,6 +54,86 @@ SETTLEMENT_RULES = {
     "TG 6+": lambda m: (m.home_score + m.away_score) >= 6,
 }
 
+
+
+
+def _resolve_battles(db: Session, affected_slip_ids: set):
+    """
+    Check if any battles that involve the given slip IDs are now fully resolved.
+    If so, determine winners and award points.
+    """
+    if not affected_slip_ids:
+        return
+
+    # Find all battles that involve these slips
+    affected_participants = db.query(models.BattleParticipant).filter(
+        models.BattleParticipant.slip_id.in_(affected_slip_ids)
+    ).all()
+    affected_battle_ids = set(p.battle_id for p in affected_participants)
+
+    for b_id in affected_battle_ids:
+        battle = db.query(models.Battle).filter(models.Battle.id == b_id).first()
+        if not battle or battle.status != "active":
+            continue
+
+        # Check ALL participants in this battle, not just affected ones
+        participants = db.query(models.BattleParticipant).filter(
+            models.BattleParticipant.battle_id == b_id
+        ).all()
+
+        slip_ids_in_battle = [p.slip_id for p in participants]
+        slips_in_battle = db.query(models.Slip).filter(models.Slip.id.in_(slip_ids_in_battle)).all()
+
+        statuses_in_battle = [s.status for s in slips_in_battle]
+        if "pending" in statuses_in_battle:
+            continue  # Battle is still ongoing
+
+        # Battle is finished! Resolve points.
+        logger.info(f"Battle {battle.invite_code} (ID: {battle.id}) has finished. Resolving points...")
+
+        won_slips = [s for s in slips_in_battle if s.status == "won"]
+
+        if not won_slips:
+            # Everyone lost (or all voided)
+            logger.info(f"Battle {battle.invite_code} finished with NO winners.")
+            for p in participants:
+                p.earned_points = 0
+        else:
+            battle_selections = db.query(models.SlipSelection).filter(models.SlipSelection.slip_id.in_(slip_ids_in_battle)).all() if slip_ids_in_battle else []
+            battle_selections_by_slip = {}
+            for s in battle_selections:
+                battle_selections_by_slip.setdefault(s.slip_id, []).append(s)
+
+            battle_odd_ids = [s.odd_id for s in battle_selections]
+            battle_odds = db.query(models.Odd).filter(models.Odd.id.in_(battle_odd_ids)).all() if battle_odd_ids else []
+            battle_odds_dict = {o.id: o for o in battle_odds}
+
+            def get_real_odd(slip):
+                selections = battle_selections_by_slip.get(slip.id, [])
+                tot = 1.0
+                for sel in selections:
+                    if sel.status == "won":
+                        odd = battle_odds_dict.get(sel.odd_id)
+                        if odd: tot *= odd.odd_value
+                return tot
+
+            max_odd = max(get_real_odd(s) for s in won_slips)
+
+            winning_slips = [s for s in won_slips if get_real_odd(s) == max_odd]
+            winning_user_ids = set([s.user_id for s in winning_slips])
+
+            if len(winning_user_ids) == 1:
+                winner_id = list(winning_user_ids)[0]
+                logger.info(f"Battle {battle.invite_code} single winner is User {winner_id} with {max_odd:.2f} odds. 3 Points awarded.")
+                for p in participants:
+                    p.earned_points = 3 if p.user_id == winner_id else 0
+            else:
+                logger.info(f"Battle {battle.invite_code} tie between users {winning_user_ids} with {max_odd:.2f} odds. 1 Point each.")
+                for p in participants:
+                    p.earned_points = 1 if p.user_id in winning_user_ids else 0
+
+        battle.status = "completed"
+        logger.info(f"Battle {battle.invite_code} marked as completed.")
 
 
 def settle_finished_matches(db: Session, finished_match_ids: list) -> list:
@@ -187,79 +276,7 @@ def settle_finished_matches(db: Session, finished_match_ids: list) -> list:
             })
 
     # 4. Check for Battle Completions
-    if affected_slip_ids:
-        # Find all battles that involve these slips
-        affected_participants = db.query(models.BattleParticipant).filter(
-            models.BattleParticipant.slip_id.in_(affected_slip_ids)
-        ).all()
-        affected_battle_ids = set(p.battle_id for p in affected_participants)
-
-        for b_id in affected_battle_ids:
-            battle = db.query(models.Battle).filter(models.Battle.id == b_id).first()
-            if not battle or battle.status != "active":
-                continue
-
-            # Check if ALL participants in this battle have finished slips
-            participants = db.query(models.BattleParticipant).filter(
-                models.BattleParticipant.battle_id == b_id
-            ).all()
-
-            slip_ids_in_battle = [p.slip_id for p in participants]
-            slips_in_battle = db.query(models.Slip).filter(models.Slip.id.in_(slip_ids_in_battle)).all()
-
-            statuses_in_battle = [s.status for s in slips_in_battle]
-            if "pending" in statuses_in_battle:
-                continue  # Battle is still ongoing
-
-            # Battle is finished! Resolve points.
-            logger.info(f"Battle {battle.invite_code} (ID: {battle.id}) has finished. Resolving points...")
-            
-            won_slips = [s for s in slips_in_battle if s.status == "won"]
-            
-            if not won_slips:
-                # Everyone lost
-                logger.info(f"Battle {battle.invite_code} finished with NO winners.")
-                for p in participants:
-                    p.earned_points = 0
-            else:
-                # To find max odds, we need to recalculate them properly for each slip just in case
-                # But since we update total_odd conceptually, let's just use the recalculated one or slip.total_odd if we updated it
-                # Actually, we didn't update slip.total_odd in DB, we just calculated payout. Let's update slip.total_odd in DB too.
-                # I'll modify the above loop slightly implicitly by recalculating here:
-                battle_selections = db.query(models.SlipSelection).filter(models.SlipSelection.slip_id.in_(slip_ids_in_battle)).all() if slip_ids_in_battle else []
-                battle_selections_by_slip = {}
-                for s in battle_selections:
-                    battle_selections_by_slip.setdefault(s.slip_id, []).append(s)
-                    
-                battle_odd_ids = [s.odd_id for s in battle_selections]
-                battle_odds = db.query(models.Odd).filter(models.Odd.id.in_(battle_odd_ids)).all() if battle_odd_ids else []
-                battle_odds_dict = {o.id: o for o in battle_odds}
-                
-                def get_real_odd(slip):
-                    selections = battle_selections_by_slip.get(slip.id, [])
-                    tot = 1.0
-                    for sel in selections:
-                        if sel.status == "won":
-                            odd = battle_odds_dict.get(sel.odd_id)
-                            if odd: tot *= odd.odd_value
-                    return tot
-
-                max_odd = max(get_real_odd(s) for s in won_slips)
-                
-                winning_slips = [s for s in won_slips if get_real_odd(s) == max_odd]
-                winning_user_ids = set([s.user_id for s in winning_slips])
-                
-                if len(winning_user_ids) == 1:
-                    winner_id = list(winning_user_ids)[0]
-                    logger.info(f"Battle {battle.invite_code} single winner is User {winner_id} with {max_odd:.2f} odds. 3 Points awarded.")
-                    for p in participants:
-                        p.earned_points = 3 if p.user_id == winner_id else 0
-                else:
-                    logger.info(f"Battle {battle.invite_code} tie between users {winning_user_ids} with {max_odd:.2f} odds. 1 Point each.")
-                    for p in participants:
-                        p.earned_points = 1 if p.user_id in winning_user_ids else 0
-
-            battle.status = "completed"
+    _resolve_battles(db, affected_slip_ids)
 
     db.commit()
     return settled_slips
@@ -364,6 +381,8 @@ def settle_voided_matches(db: Session, max_hours_past: int = 4) -> list:
                 "payout": payout,
             })
             
-    # Skipping battle check here for brevity, or we can just let it be handled later.
+    # Check for battle completions after voiding
+    _resolve_battles(db, affected_slip_ids)
+
     db.commit()
     return settled_slips
