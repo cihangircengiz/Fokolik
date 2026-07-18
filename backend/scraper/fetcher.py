@@ -298,7 +298,6 @@ class NesineFetcher:
                     })
 
         return odds_list
-
 def process_nesine_odds(db: Session):
     fetcher = NesineFetcher()
     try:
@@ -307,26 +306,38 @@ def process_nesine_odds(db: Session):
         logger.error(f"Failed to fetch nesine bulletin: {e}")
         return []
 
+    if not nesine_matches:
+        return []
+
+    # Get all match IDs from the fetched bulletin
+    nesine_match_ids = [str(m["id"]) for m in nesine_matches]
+    
+    # Batch query all matches that exist in our DB in one go
+    db_matches = db.query(Match).filter(Match.id.in_(nesine_match_ids)).all()
+    db_matches_map = {m.id: m for m in db_matches}
+
+    # Batch query all existing odds for these matches in one go
+    db_odds = db.query(Odd).filter(Odd.match_id.in_(nesine_match_ids)).all()
+    # Map them by (match_id, bet_type) to quickly check existence/values
+    db_odds_map = {(o.match_id, o.bet_type): o for o in db_odds}
+
     updated_matches_data = []
 
     for mdata in nesine_matches:
         match_id = str(mdata["id"])
         
-        # Check if match exists in DB (created by Mackolik)
-        db_match = db.query(Match).filter(Match.id == match_id).first()
+        # Check if match exists in DB
+        db_match = db_matches_map.get(match_id)
         if not db_match:
             continue
             
-        # Update or create odds
         odds_changed = False
+        
         for odd_data in mdata["odds"]:
             bet_type = odd_data["bet_type"]
             odd_value = odd_data["odd_value"]
             
-            db_odd = db.query(Odd).filter(
-                Odd.match_id == match_id,
-                Odd.bet_type == bet_type
-            ).first()
+            db_odd = db_odds_map.get((match_id, bet_type))
             
             if db_odd:
                 if db_odd.odd_value != odd_value:
@@ -339,15 +350,16 @@ def process_nesine_odds(db: Session):
                     odd_value=odd_value
                 )
                 db.add(db_odd)
+                db_odds_map[(match_id, bet_type)] = db_odd
                 odds_changed = True
                 
         if odds_changed:
             db.flush()
-            # Fetch all current odds for this match to broadcast
-            all_odds = db.query(Odd).filter(Odd.match_id == match_id).all()
+            # Collect all current odds for this match to broadcast
+            all_match_odds = [o for key, o in db_odds_map.items() if key[0] == match_id]
             odds_payload = [
                 {"id": o.id, "bet_type": o.bet_type, "odd_value": o.odd_value}
-                for o in all_odds
+                for o in all_match_odds
             ]
             updated_matches_data.append({
                 "id": match_id,
